@@ -152,7 +152,7 @@ Baixe o repositório.
 
 Abra o arquivo index.html no navegador.
 
-Se quiser, hospede com GitHub Pages.
+
 
 🗂️ Estrutura do Projeto (simplificada)
 📁 assets
