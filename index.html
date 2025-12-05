@@ -1,0 +1,2281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Maykow & Alice Race - Mobile Edition</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #222;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    /* O background image agora é controlado via JS para garantir a troca Mobile/Desktop */
+    #game-container {
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-size: cover; /* Padrão Desktop */
+      display: grid;
+      border: 3px solid white;
+      width: 100vw;
+      height: 720px;
+      padding: 10px;
+      gap: 20px;
+      display: none;
+      position: relative;
+      box-sizing: border-box;
+      
+      /* Layout em grid para desktop */
+      grid-template-columns: 260px auto 300px;
+      grid-template-rows: 1fr;
+      grid-template-areas: "vehicle game ranking";
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      display: none;
+      background: #444;
+      border: 2px solid white;
+      width: 480px;
+      height: 600px;
+      max-width: 100%;
+      max-height: 90vh;
+      object-fit: contain;
+      grid-area: game;
+      justify-self: center;
+    }
+
+    #sandstormCanvas {
+      position: absolute;
+      background: transparent;
+      pointer-events: none;
+      z-index: 10;
+      border: none;
+      grid-area: game;
+      justify-self: center;
+    }
+
+    #ranking {
+      grid-area: ranking;
+      width: 300px;
+      color: white;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid white;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 600px;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    #ranking h2 {
+      margin-top: 0;
+      text-align: center;
+      font-size: 24px;
+    }
+
+    #ranking ol {
+      padding-left: 20px;
+      margin-top: 10px;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+
+    #ranking li {
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+
+    #score-display {
+      color: white;
+      font-size: 24px;
+      text-align: center;
+      margin: 10px 0;
+    }
+
+    button {
+      padding: 10px;
+      background: #ff4444;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    button:hover {
+      background: #ff2222;
+    }
+
+    #vehicle-sidebar {
+      grid-area: vehicle;
+      width: 260px;
+      color: white;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid white;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      text-align: center;
+      height: 600px;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    #vehicle-sidebar h2 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+
+    #car-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+      width: 100%;
+      justify-items: center;
+      align-content: start;
+      overflow-y: auto;
+      padding: 5px;
+    }
+
+    .car-option {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: border 0.2s ease-in-out, filter 0.2s ease-in-out;
+      padding: 10px;
+      border-radius: 5px;
+      flex-direction: column;
+      filter: brightness(0.5);
+      width: 100%;
+      max-width: 220px;
+      min-height: 180px;
+      box-sizing: border-box;
+    }
+
+    .car-option.selected {
+      border: 3px solid limegreen;
+      filter: brightness(1);
+    }
+
+    .car-option:hover {
+      border: 3px solid gold;
+      filter: brightness(1);
+    }
+
+    .car-driver-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .car-option img.car-image {
+      width: 60px;
+      height: 102px;
+      display: block;
+      object-fit: contain;
+    }
+
+    .car-option img.driver-image {
+      width: 80px;
+      height: 100px;
+      object-fit: contain;
+      border: none;
+    }
+
+    .car-option .driver-name {
+        margin-top: 5px;
+        font-size: 16px;
+        font-weight: bold;
+        color: white;
+    }
+
+    #startButton {
+        padding: 0;
+        background: none;
+        border: none;
+        cursor: pointer;
+        margin-top: 20px;
+        width: 97.5px;
+        height: auto;
+        visibility: visible;
+    }
+    #startButton:hover {
+        filter: brightness(1.2);
+    }
+
+    .blinking-button {
+      animation: blink-animation 0.4s steps(1, start) infinite;
+    }
+
+    @keyframes blink-animation {
+      to {
+        visibility: hidden;
+      }
+    }
+
+    #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 30px;
+        z-index: 200;
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+    }
+
+    #transition-screen,
+    #transition-screen-phase-2,
+    #transition-screen-phase-3 {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-size: cover;
+      background-position: center top;
+      background-repeat: no-repeat;
+      background-color: black;
+      display: none;
+      z-index: 1000;
+    }
+
+    #sunlight-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at top center, rgba(255, 255, 200, 0.3) 0%, rgba(255, 255, 200, 0) 80%);
+      pointer-events: none;
+      z-index: 9;
+    }
+
+    #lightning-overlay {
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      background-color: white; 
+      opacity: 0; 
+      pointer-events: none; 
+      z-index: 100;
+    }
+
+    #victory-screen {
+        position: relative;
+        background-color: black;
+    }
+
+    #victory-screen-background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      z-index: 1;
+    }
+
+    #confettiCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+    }
+
+    .fade-out {
+      animation: fadeOutAnimation 1s forwards;
+    }
+
+    @keyframes fadeOutAnimation {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    @keyframes pulsar {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); background-color: none; }    
+      100% { transform: scale(1); }
+    }
+     #startButton{
+      animation: pulsar 1.5s infinite;
+    }
+
+    #start-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      color: white;
+    }
+
+    #start-game-button {
+      font-size: 24px;
+      padding: 15px 30px;
+      background: #ff4444;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      cursor: pointer;
+      animation: blink 1s infinite;
+      margin-top: 400px;
+    }
+
+    /* --- RESPONSIVIDADE (MOBILE GERAL - até 900px) --- */
+    @media (max-width: 900px) {
+      
+      /* AJUSTE PARA NÃO CORTAR TEXTOS DAS TELAS DE FUNDO EM MOBILE */
+      #start-screen,
+      #transition-screen,
+      #transition-screen-phase-2,
+      #transition-screen-phase-3,
+      #victory-screen-background {
+        background-size: contain !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+      }
+
+      /* Ajuste específico para a imagem de Game Over para garantir que não corte */
+      #final-game-over-img {
+          object-fit: contain !important;
+          width: 100% !important;
+          height: auto !important;
+          max-height: 100vh !important;
+      }
+
+      #game-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        grid-template-areas: 
+          "vehicle"
+          "game"
+          "ranking";
+        height: 100vh;
+        width: 100vw;
+        padding: 10px;
+        gap: 15px;
+        overflow-y: auto;
+        align-items: start;
+        background-size: 100% 100% !important; 
+        background-position: center center !important;
+      }
+
+      canvas {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 480/600;
+        max-height: 60vh;
+        justify-self: center;
+      }
+
+      #vehicle-sidebar, #ranking {
+        width: 100%;
+        margin: 0;
+        height: auto;
+        min-height: fit-content;
+        max-height: none;
+      }
+
+      #vehicle-sidebar {
+        order: 1;
+        padding: 15px;
+      }
+      
+      #ranking {
+        order: 3;
+        margin-bottom: 10px;
+        padding: 15px;
+      }
+
+      #car-options {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+        padding: 5px;
+        width: 100%;
+      }
+      
+      .car-option {
+        width: 45%;
+        min-height: 160px;
+        padding: 8px;
+        margin: 0;
+        transform: scale(0.95);
+        box-sizing: border-box;
+      }
+      
+      .car-option:nth-child(1),
+      .car-option:nth-child(2) {
+        width: 45%;
+      }
+      
+      .car-option:nth-child(3) {
+        width: 45%;
+        margin-top: 10px;
+        align-self: center;
+        justify-self: center;
+        margin-left: auto;
+        margin-right: auto;
+        clear: both;
+      }
+
+      .car-driver-wrapper {
+        gap: 8px;
+        flex-direction: column; /* Padrão mobile tablet */
+      }
+
+      .car-option img.car-image {
+        width: 50px;
+        height: 85px;
+      }
+
+      .car-option img.driver-image {
+        width: 60px;
+        height: 75px;
+      }
+
+      #start-game-button {
+        margin-top: 200px;
+        font-size: 20px;
+        padding: 12px 24px;
+      }
+
+      #initials-container {
+        margin-bottom: 10px !important;
+      }
+
+      #playerInitials {
+        width: 70px !important;
+        font-size: 18px !important;
+      }
+      
+      #ending-video {
+        object-fit: contain !important;
+        background-color: black;
+      }
+    }
+
+    /* --- RESPONSIVIDADE ESPECÍFICA PARA TELAS PEQUENAS (480px / 430px) --- */
+    @media (max-width: 480px) {
+      /* Configuração do Grid para manter Veículo em Cima e Ranking Embaixo */
+      #game-container {
+        display: grid !important; /* Força grid para respeitar grid-areas */
+        grid-template-areas: 
+          "vehicle"
+          "ranking";
+          /* O Canvas ("game") entra automaticamente no meio quando visível via JS */
+      }
+
+      /* Container dos veículos em Triângulo */
+      #car-options {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between; /* Espalha os dois primeiros */
+        gap: 10px;
+      }
+
+      /* Cards individuais */
+      .car-option {
+        width: 48%; /* Permite dois na mesma linha */
+        min-height: 120px;
+        padding: 5px;
+        margin: 0;
+        transform: none; /* Remove escala para ajuste fino */
+      }
+      
+      /* Veículos 1 e 2 na primeira linha */
+      .car-option:nth-child(1),
+      .car-option:nth-child(2) {
+        width: 48%;
+      }
+      
+      /* Veículo 3 centralizado abaixo */
+      .car-option:nth-child(3) {
+        width: 60%; /* Um pouco mais largo para destaque ou 48% também funciona */
+        margin-top: 10px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      
+      /* CONFIGURAÇÃO CARRO ESQUERDA / PILOTO DIREITA */
+      .car-driver-wrapper {
+        flex-direction: row !important; /* Força linha horizontal */
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      /* Ajuste de tamanho das imagens para caberem lado a lado no card pequeno */
+      .car-option img.car-image {
+        width: 40px;
+        height: auto;
+        max-height: 70px;
+      }
+      
+      .car-option img.driver-image {
+        width: 45px;
+        height: auto;
+        max-height: 65px;
+      }
+      
+      .driver-name {
+        font-size: 14px !important;
+        margin-top: 2px;
+      }
+      
+      #vehicle-sidebar h2, #ranking h2 {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+
+      /* Ranking fica embaixo */
+      #ranking {
+        margin-top: 0;
+      }
+    }
+
+    #ending-video {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1002;
+      object-fit: cover;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+  </style>
+</head>
+
+
+<body>
+  <div id="start-screen">
+    <button id="start-game-button">Start</button>
+  </div>
+
+  <div id="loading-screen">
+      Carregando recursos...
+  </div>
+
+  <div id="game-container">
+    <canvas id="gameCanvas" width="480" height="600"></canvas>
+    <canvas id="sandstormCanvas" width="480" height="600"></canvas>
+
+    <div id="ranking">
+      <div>
+        <h2>Ranking</h2>
+        <div id="score-display">Pontos: 0</div>
+        <div id="lives-display" style="color: white; font-size: 24px; text-align: center; margin: 10px 0;">Vidas: 4</div>
+         <ol id="rankingList"></ol>
+      </div>
+      <button id="resetRanking">Zerar Ranking</button>
+  </div>
+
+ 
+    <div id="vehicle-sidebar">
+      <h2>Escolha seu Veículo</h2>
+        <div id="initials-container" style="margin-bottom: 15px; text-align: center;">
+            <label for="playerInitials" style="display: block; margin-bottom: 5px; font-size: 18px;">Digite suas iniciais:</label>
+            <input type="text" id="playerInitials" maxlength="3" style="width: 80px; text-align: center; font-size: 20px; text-transform: uppercase; padding: 5px; border-radius: 5px; border: 2px solid white; background-color: rgba(0,0,0,0.5); color: white;">
+        </div>
+      <div id="car-options">
+      </div>
+      <img id="startButton" src="assets/img/botao.png" alt="Iniciar Jogo">
+    </div>
+  </div>
+
+  <div id="transition-screen"></div>
+  <div id="transition-screen-phase-2"></div>
+  <div id="transition-screen-phase-3"></div>
+  <div id="sunlight-overlay" style="display: none;"></div>
+  <div id="lightning-overlay"></div>
+
+  <div id="victory-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1001;">
+      <div id="victory-screen-background"></div>
+      <canvas id="confettiCanvas"></canvas>
+  </div>
+  <div id="final-game-over-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: black; z-index: 1003; justify-content: center; align-items: center;">
+    <img id="final-game-over-img" src="" style="width: 100%; height: 100%; object-fit: contain;">
+  </div>
+
+  <video id="ending-video" src="assets/video/encerramento.mp4" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1002; object-fit: cover;"></video>
+  
+  <audio id="musicaVoceVenceuSound" src="assets/audio/musica_voce_venceu.mp3" preload="auto"></audio>
+
+  <img id="penguinSprite" src="assets/img/pinguim.png" preload="auto" style="display:none;">
+  <img id="cowSpriteSheet" src="assets/img/vaca_sprite.png" preload="auto" style="display:none;">
+
+  <audio id="crashSound" src="assets/audio/crash.mp3" preload="auto"></audio>
+  <audio id="carSound" src="assets/audio/som_carro.mp3" preload="auto" loop></audio>
+  <audio id="themeSoundPhase1" src="assets/audio/tema1.mp3" preload="auto" loop></audio> 
+  <audio id="themeSoundPhase2" src="assets/audio/tema2.mp3" preload="auto" loop></audio> 
+  <audio id="themeSoundPhase3" src="assets/audio/tema3.mp3" preload="auto" loop></audio>
+  <audio id="gameOverSound" src="assets/audio/game_over.mp3" preload="auto"></audio>
+  <audio id="gameOverSound2" src="assets/audio/game_over2.mp3" preload="auto"></audio>
+  <audio id="coinSound" src="assets/audio/moeda.mp3" preload="auto"></audio>
+  <audio id="clickSound" src="assets/audio/click.mp3" preload="auto"></audio>
+  <audio id="pingSound" src="assets/audio/ping.mp3" preload="auto"></audio>
+  <audio id="startSound" src="assets/audio/start.mp3" preload="auto"></audio>
+  <audio id="ligarCarroSound" src="assets/audio/ligar_carro.mp3" preload="auto"></audio>
+  <audio id="menuMusicSound" src="assets/audio/musica_menu.mp3" preload="auto" loop></audio>
+  <audio id="transitionMusicSound" src="assets/audio/musica_transicao_fase1.mp3" preload="auto"></audio>
+  <audio id="musicaTransitionSoundPhase2" src="assets/audio/musica_transicao_fase2.mp3" preload="auto"></audio>
+  <audio id="musicaTransitionSoundPhase3" src="assets/audio/musica_transicao_fase3.mp3" preload="auto"></audio>
+  <audio id="finalWinSound" src="assets/audio/final_win.mp3" preload="auto"></audio>
+  <audio id="freioSound" src="assets/audio/freio.mp3" preload="auto"></audio>
+  <audio id="rainSound" src="assets/audio/chuva.mp3" preload="auto"></audio>
+  <audio id="thunderSound" src="assets/audio/trovao.mp3" preload="auto"></audio>
+
+
+<script>
+(() => {
+  // --- GERENCIAMENTO DE CAMINHOS DE IMAGENS E RESPONSIVIDADE ---
+  const arquivosComVersaoMobile = [
+    'fundo_deserto.png',
+    'fundo_fase3.png',
+    'fundo_garagem.png',
+    'fundo_pista.png',
+    'fundo_tela_apresentacao.png',
+    'tela_game_over.png',
+    'transicao_fase_1.png',
+    'transicao_fase_2.png',
+    'transicao_fase_3.png',
+    'voce_venceu.png'
+  ];
+
+  function obterCaminhoImagem(nomeArquivo) {
+      const isMobile = window.innerWidth <= 900;
+      
+      if (isMobile && arquivosComVersaoMobile.includes(nomeArquivo)) {
+          const pontoIndex = nomeArquivo.lastIndexOf('.');
+          const nomeSemExtensao = nomeArquivo.substring(0, pontoIndex);
+          const extensao = nomeArquivo.substring(pontoIndex); // inclui o ponto
+          
+          const caminhoMobile = `assets/img/celular/${nomeSemExtensao}_celular${extensao}`;
+          return caminhoMobile;
+      }
+      
+      const caminhoDesktop = `assets/img/${nomeArquivo}`;
+      return caminhoDesktop;
+  }
+
+  // Função para atualizar as imagens estáticas imediatamente ao redimensionar ou carregar
+  function aplicarImagensEstaticas() {
+      // Tela Inicial
+      const startScreen = document.getElementById('start-screen');
+      if(startScreen) startScreen.style.backgroundImage = `url('${obterCaminhoImagem("fundo_tela_apresentacao.png")}')`;
+
+      // Telas de Transição
+      const t1 = document.getElementById('transition-screen');
+      const t2 = document.getElementById('transition-screen-phase-2');
+      const t3 = document.getElementById('transition-screen-phase-3');
+      if(t1) t1.style.backgroundImage = `url('${obterCaminhoImagem("transicao_fase_1.png")}')`;
+      if(t2) t2.style.backgroundImage = `url('${obterCaminhoImagem("transicao_fase_2.png")}')`;
+      if(t3) t3.style.backgroundImage = `url('${obterCaminhoImagem("transicao_fase_3.png")}')`;
+
+      // Tela de Vitória
+      const victoryBg = document.getElementById('victory-screen-background');
+      if(victoryBg) victoryBg.style.backgroundImage = `url('${obterCaminhoImagem("voce_venceu.png")}')`;
+
+      // Fundo da Garagem (Se o jogo não estiver rodando na pista)
+      const gameContainer = document.getElementById('game-container');
+      if (!jogoIniciado && !faseConcluida && currentPhase === 1) {
+          gameContainer.style.backgroundImage = `url('${obterCaminhoImagem("fundo_garagem.png")}')`;
+      }
+  }
+
+  // Listener para troca de orientação/tamanho da tela em tempo real
+  window.addEventListener('resize', () => {
+      aplicarImagensEstaticas();
+      // Se estiver no jogo, atualiza o fundo da fase atual
+      if (jogoIniciado) {
+          const gameContainerElement = document.getElementById('game-container');
+          if (currentPhase === 1) {
+              gameContainerElement.style.backgroundImage = `url('${obterCaminhoImagem("fundo_pista.png")}')`;
+          } else if (currentPhase === 2) {
+              gameContainerElement.style.backgroundImage = `url('${obterCaminhoImagem("fundo_deserto.png")}')`;
+          } else if (currentPhase === 3) {
+              gameContainerElement.style.backgroundImage = `url('${obterCaminhoImagem("fundo_fase3.png")}')`;
+          }
+      }
+  });
+
+  const sandstormCanvas = document.getElementById("sandstormCanvas");
+  const sandCtx = sandstormCanvas.getContext("2d");
+  let whirlwindParticles = [];
+  const whirlwindCenter = { x: sandstormCanvas.width / 2, y: sandstormCanvas.height / 2 };
+  const CONFIG = {
+    VELOCIDADE_INICIAL: 4,
+    INCREMENTO_VELOCIDADE: 0.5,
+    INTERVALO_OBSTACULOS: 1200,
+    INTERVALO_ARVORES: 400,
+    PONTOS_PARA_DIFICULDADE: 10,
+    TEMPO_ATRASO_GAMEOVER: 1000,
+    PONTOS_MOEDA: 15,
+    INTERVALO_MOEDAS: 4200,
+    VELOCIDADE_LATERAL_CARRO: 6,
+    MOEDA_SPRITE_WIDTH: 40,
+    MOEDA_SPRITE_HEIGHT: 40,
+    MOEDA_FRAMES: 1,
+    MOEDA_ANIMATION_SPEED: 0.1,
+    BLINK_START_BUTTON_DURATION: 1200,
+    DURACAO_FASE_1: 70000, 
+    DURACAO_FASE_2: 85000,
+    DURACAO_FASE_3: 100000,
+    INTERVALO_PISTA_CONGELADA: 7000,
+    DURACAO_BLOQUEIO_CONTROLE: 400,
+    VIBRATION_INTENSITY: 4,
+    PISTA_CONGELADA_ANIMATION_SPEED: 0.1,
+  };
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+  
+  const crashSound = document.getElementById("crashSound");
+  const carSound = document.getElementById("carSound");
+  const themeSoundPhase1 = document.getElementById("themeSoundPhase1");
+  const themeSoundPhase2 = document.getElementById("themeSoundPhase2");
+  const themeSoundPhase3 = document.getElementById("themeSoundPhase3");
+  const gameOverSound = document.getElementById("gameOverSound");
+  const coinSound = document.getElementById("coinSound");
+  const clickSound = document.getElementById("clickSound");
+  const pingSound = document.getElementById("pingSound");
+  const startSound = document.getElementById("startSound");
+  const ligarCarroSound = document.getElementById("ligarCarroSound");
+  const menuMusicSound = document.getElementById("menuMusicSound");
+  const transitionMusicSoundPhase1 = document.getElementById("transitionMusicSound");
+  const musicaTransitionSoundPhase2 = document.getElementById("musicaTransitionSoundPhase2");
+  const musicaTransitionSoundPhase3 = document.getElementById("musicaTransitionSoundPhase3");
+  const finalWinSound = document.getElementById("finalWinSound");
+  const freioSound = document.getElementById("freioSound");
+
+  const musicaVoceVenceuSound = document.getElementById("musicaVoceVenceuSound");
+  const victoryScreen = document.getElementById("victory-screen");
+  const endingVideo = document.getElementById("ending-video");
+  const victoryScreenBackground = document.getElementById('victory-screen-background');
+
+  const lightningOverlay = document.getElementById("lightning-overlay");
+  const thunderSound = document.getElementById("thunderSound");
+  let tempoProximoRelampago = 0;
+
+  menuMusicSound.volume = 0.2;
+  pingSound.volume = 0.2;
+  const vehicleSidebar = document.getElementById("vehicle-sidebar");
+  const carOptionsContainer = document.getElementById("car-options");
+  const startButton = document.getElementById("startButton");
+  const loadingScreen = document.getElementById("loading-screen");
+  const rankingElement = document.getElementById("ranking");
+  const transitionScreenPhase1 = document.getElementById("transition-screen");
+  const transitionScreenPhase2 = document.getElementById("transition-screen-phase-2");
+  const transitionScreenPhase3 = document.getElementById("transition-screen-phase-3");
+  const margemEsquerda = 80;
+  const margemDireita = canvas.width - 80;
+  const carroLargura = 50;
+  const carroAltura = 85;
+  let carroX = canvas.width / 2 - carroLargura / 2;
+  let carroY = canvas.height - carroAltura - 20;
+  let esquerdaPressionado = false, direitaPressionado = false;
+  let obstaculos = [];
+  let arvoresLaterais = [];
+  let moedas = [];
+  let frozenPatches = [];
+  let obstaculosLaterais = [];
+  let pontuacao = 0;
+  let velocidade = CONFIG.VELOCIDADE_INICIAL;
+  let gameOver = false;
+  let exibirGameOver = false;
+  let controlesBloqueados = false;
+  let ultimoObstaculo = 0;
+  let ultimoSpawnArvore = 0;
+  let ultimaMoeda = 0;
+  let ultimoSpawnPistaCongelada = 0;
+  let ultimoObstaculoLateral = 0;
+  let offsetLinhas = 0;
+  let blinkCount = 0;
+  let blinkInterval = null;
+  let carroVisivel = true;
+  let gameFrameId = null;
+  let flocosDeNeve = [];
+  const NUM_FLOCOS = 100;
+  let esperandoInputReiniciar = false;
+  let gameOverTimeoutId = null;
+  let jogoIniciado = false;
+  let ranking = JSON.parse(localStorage.getItem("ranking")) || [];
+  let tempoInicioFase = null;
+  let linhaDeChegada = null;
+  let faseConcluida = false;
+  let currentPhase = 1;
+  let vidas = 4;
+  let currentPlayerInitials = '';
+  let currentSessionId = null;
+
+  let currentThemeSound;
+  const finalGameOverScreen = document.getElementById("final-game-over-screen");
+  const gameOverSound2 = document.getElementById("gameOverSound2");
+  const livesDisplay = document.getElementById("lives-display");
+
+  let gotasDeChuva = [];
+  const NUM_GOTAS = 100;
+  const confettiCanvas = document.getElementById('confettiCanvas');
+  const confettiCtx = confettiCanvas.getContext('2d');
+  let confettiParticles = [];
+  let confettiAnimationId = null;
+  const confettiColors = ['#f9e477', '#f26d6b', '#b58bf2', '#6bf2a3', '#f28bca'];
+  function resizeConfettiCanvas() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+  }
+
+  function ConfettiParticle() {
+      this.x = Math.random() * confettiCanvas.width;
+      this.y = -20;
+      this.size = Math.random() * 10 + 5;
+      this.speed = Math.random() * 3 + 2;
+      this.color = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+      this.tilt = Math.random() * 10 - 5;
+      this.tiltAngle = 0;
+      this.tiltAngleSpeed = Math.random() * 0.1 + 0.05;
+  }
+
+  ConfettiParticle.prototype.update = function() {
+      this.y += this.speed;
+      this.x += Math.sin(this.y * 0.05) * 2;
+      this.tiltAngle += this.tiltAngleSpeed;
+  }
+
+  ConfettiParticle.prototype.draw = function() {
+      confettiCtx.save();
+      confettiCtx.fillStyle = this.color;
+      confettiCtx.translate(this.x + this.size / 2, this.y + this.size / 2);
+      confettiCtx.rotate(this.tiltAngle);
+      confettiCtx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+      confettiCtx.restore();
+  }
+
+  function startConfetti() {
+      resizeConfettiCanvas();
+      confettiParticles = [];
+      for (let i = 0; i < 200; i++) {
+          confettiParticles.push(new ConfettiParticle());
+      }
+      if (confettiAnimationId) cancelAnimationFrame(confettiAnimationId);
+      animateConfetti();
+  }
+
+  function animateConfetti() {
+      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      confettiParticles.forEach((particle, index) => {
+          particle.update();
+          particle.draw();
+          if (particle.y > confettiCanvas.height) {
+              confettiParticles.splice(index, 1);
+          }
+      });
+      if (confettiParticles.length < 200) {
+          for (let i = 0; i < 2; i++) {
+             confettiParticles.push(new ConfettiParticle());
+          }
+      }
+      confettiAnimationId = requestAnimationFrame(animateConfetti);
+  }
+
+  function stopConfetti() {
+      if (confettiAnimationId) {
+          cancelAnimationFrame(confettiAnimationId);
+          confettiAnimationId = null;
+      }
+      confettiParticles = [];
+      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  }
+
+
+  function criarChuva() {
+    gotasDeChuva = [];
+    for (let i = 0; i < NUM_GOTAS; i++) {
+      gotasDeChuva.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        comprimento: 10 + Math.random() * 10,
+        velocidade: 1 + Math.random() * 2 
+      });
+    }
+  }
+
+  function atualizarEDesenharChuva() {
+    ctx.strokeStyle = "rgba(173, 216, 230, 0.7)";
+    ctx.lineWidth = 2;
+    for (let gota of gotasDeChuva) {
+      ctx.beginPath();
+      ctx.moveTo(gota.x, gota.y);
+      ctx.lineTo(gota.x, gota.y + gota.comprimento);
+      ctx.stroke();
+      gota.y += gota.velocidade;
+      if (gota.y > canvas.height) {
+        gota.y = -gota.comprimento;
+        gota.x = Math.random() * canvas.width;
+      }
+    }
+  }
+
+
+  const rainSound = document.getElementById("rainSound");
+  let chuvaAtiva = false;
+  let inicioChuvaTempo = null;
+
+  function iniciarChuva() {
+    chuvaAtiva = true;
+    rainSound.currentTime = 0;
+    rainSound.loop = true;
+    rainSound.play().catch(e => console.log("Não foi possível tocar o som da chuva:", e));
+  }
+
+  const listaRanking = document.getElementById("rankingList");
+  const displayPontuacao = document.getElementById("score-display");
+  
+  const imagensCarrosDisponiveis = [
+    { id: 'car1', src: 'assets/img/carrinho_imagem.png', driverSrc: 'assets/img/maykow.png', name: 'Maykow', image: new Image(), driverImage: new Image() },
+    { id: 'car2', src: 'assets/img/carrinho_imagem2.png', driverSrc: 'assets/img/alice.png', name: 'Alice', image: new Image(), driverImage: new Image() },
+    { id: 'car3', src: 'assets/img/carrinho_imagem3.png', driverSrc: 'assets/img/ana.png', name: 'Ana', image: new Image(), driverImage: new Image() }
+  ];
+  let imagemCarroAtual = null;
+  let carroSelecionadoId = null;
+
+  const imagemPedra = new Image();
+  const imagemBarreira = new Image();
+  const imagemBarreiraVelha = new Image();
+  const imagemMoedaSprite = new Image();
+  const imagemVacaSprite = new Image();
+  const imagemOvelhaSprite = new Image();
+  const imagemCavaloSprite = new Image();
+  const imagemUrsoPolarSprite = new Image();
+  const imagemServoSprite = new Image();
+  const imagemGelo = new Image();
+  const imagemBonecoGelo = new Image();
+  const originalTreeImages = [ new Image(), new Image(), new Image(), new Image(), new Image() ];
+  const cactuImages = [ new Image(), new Image(), new Image() ];
+  const pinhoImages = [ new Image(), new Image(), new Image() ];
+  const imagemPinguimSprite = new Image();
+  const imagemCobraSprite = new Image();
+  const imageTransitionPhase2 = new Image();
+  const imagemPistaCongelada = new Image();
+  const mugoImage = new Image();
+  const troncoImage = new Image();
+
+  const treeWidth = 68;
+  const treeHeight = 102;
+  const moedaLargura = 40;
+  const moedaAltura = 40;
+  function desenharCarro(x, y) {
+    if (!carroVisivel || !imagemCarroAtual || !imagemCarroAtual.complete) {
+        return;
+    }
+    ctx.drawImage(imagemCarroAtual, x, y, carroLargura, carroAltura);
+  }
+
+  function atualizarRanking() {
+    ranking.sort((a, b) => b.pontuacao - a.pontuacao);
+    listaRanking.innerHTML = "";
+    const rankingParaExibir = ranking.slice(0, 5);
+    for (const entrada of rankingParaExibir) {
+      const item = document.createElement("li");
+      item.textContent = `${entrada.nome} - ${entrada.pontuacao} pts`;
+      listaRanking.appendChild(item);
+    }
+  }
+
+  function salvarNoRanking(iniciais, pontosGanhos) {
+      if (!iniciais || !iniciais.trim() || pontosGanhos <= 0) return;
+      let jogadorDaSessao = ranking.find(j => j.id === currentSessionId);
+      if (jogadorDaSessao) {
+          jogadorDaSessao.pontuacao += pontosGanhos;
+      } else {
+          ranking.push({ id: currentSessionId, nome: iniciais, pontuacao: pontosGanhos });
+      }
+      ranking.sort((a, b) => b.pontuacao - a.pontuacao);
+      if (ranking.length > 5) {
+          ranking = ranking.slice(0, 5);
+      }
+      localStorage.setItem("ranking", JSON.stringify(ranking));
+      atualizarRanking();
+  }
+
+  
+  function criarFlocosDeNeve() {
+    flocosDeNeve = [];
+    for (let i = 0; i < NUM_FLOCOS; i++) {
+      flocosDeNeve.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 2 + 1,
+        d: Math.random() * 1 + 0.5
+      });
+    }
+  }
+
+  function atualizarEDesenharNeve() {
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    for (let i = 0; i < flocosDeNeve.length; i++) {
+      let f = flocosDeNeve[i];
+      ctx.moveTo(f.x, f.y);
+      ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2, true);
+    }
+    ctx.fill();
+    for (let i = 0; i < flocosDeNeve.length; i++) {
+      let f = flocosDeNeve[i];
+      f.y += f.d;
+      if (f.y > canvas.height) {
+        f.y = 0;
+        f.x = Math.random() * canvas.width;
+      }
+    }
+  }
+
+  function reiniciarJogo() {
+    if (window.innerWidth <= 900) {
+        vehicleSidebar.style.display = 'none';
+        rankingElement.style.display = 'none';
+    } else {
+        vehicleSidebar.style.display = 'none';
+    }
+
+    canvas.style.display = 'block';
+    const gameContainerElement = document.getElementById('game-container');
+
+    // Lógica de Background Dinâmico (Mobile/Desktop)
+    if (currentPhase === 1) {
+        document.getElementById('sunlight-overlay').style.display = 'none';
+        gameContainerElement.style.backgroundImage = `url('${obterCaminhoImagem("fundo_pista.png")}')`;
+        sandstormCanvas.style.display = 'none';
+    } else if (currentPhase === 2) {
+        document.getElementById('sunlight-overlay').style.display = 'block';
+        gameContainerElement.style.backgroundImage = `url('${obterCaminhoImagem("fundo_deserto.png")}')`;
+        sandstormCanvas.style.display = 'block';
+    } else if (currentPhase === 3) {
+        document.getElementById('sunlight-overlay').style.display = 'none';
+        gameContainerElement.style.backgroundImage = `url('${obterCaminhoImagem("fundo_fase3.png")}')`;
+        criarFlocosDeNeve();
+        sandstormCanvas.style.display = 'none';
+    }
+    
+    if(window.innerWidth > 900) {
+        gameContainerElement.style.width = '100vw';
+        gameContainerElement.style.gap = '20px';
+        gameContainerElement.style.justifyContent = 'center';
+        gameContainerElement.style.alignItems = 'center';
+    }
+
+    if (gameFrameId) cancelAnimationFrame(gameFrameId);
+    if (blinkInterval) clearInterval(blinkInterval);
+    if (gameOverTimeoutId) clearTimeout(gameOverTimeoutId);
+    blinkInterval = null;
+    gameOverTimeoutId = null;
+    jogoIniciado = true;
+
+    if (currentThemeSound) {
+      currentThemeSound.pause();
+      currentThemeSound.currentTime = 0;
+    }
+    
+    if (currentPhase === 1) {
+        currentThemeSound = themeSoundPhase1;
+    } else if (currentPhase === 2) {
+        currentThemeSound = themeSoundPhase2;
+    } else {
+        currentThemeSound = themeSoundPhase3;
+    }
+    
+    currentThemeSound.play().catch(e => console.log("Não foi possível tocar o tema do jogo:", e));
+    menuMusicSound.pause();
+    menuMusicSound.currentTime = 0;
+    carroX = canvas.width / 2 - carroLargura / 2;
+    obstaculos = [];
+    arvoresLaterais = [];
+    moedas = [];
+    frozenPatches = [];
+    obstaculosLaterais = [];
+    pontuacao = 0;
+    velocidade = CONFIG.VELOCIDADE_INICIAL;
+    gameOver = false;
+    exibirGameOver = false;
+    controlesBloqueados = false;
+    ultimoObstaculo = Date.now();
+    ultimoSpawnArvore = Date.now();
+    ultimaMoeda = Date.now();
+    ultimoSpawnPistaCongelada = Date.now();
+    ultimoObstaculoLateral = Date.now();
+    offsetLinhas = 0;
+    carroVisivel = true;
+    blinkCount = 0;
+    esperandoInputReiniciar = false;
+    tempoInicioFase = Date.now();
+    linhaDeChegada = null;
+    faseConcluida = false;
+    tempoProximoRelampago = 0; 
+
+    atualizarPontuacao();
+    atualizarVidasDisplay();
+    chuvaAtiva = false;
+    inicioChuvaTempo = null;
+    gameFrameId = requestAnimationFrame(loopJogo);
+  }
+
+  function atualizarPontuacao() {
+    displayPontuacao.textContent = `Pontos: ${pontuacao}`;
+  }
+
+  function atualizarVidasDisplay() {
+    livesDisplay.textContent = `Vidas: ${vidas}`;
+  }
+
+  // --- CONTROLES DE TECLADO ---
+  document.addEventListener("keydown", e => {
+    if (jogoIniciado && !gameOver && !faseConcluida) {
+        if (e.key === "ArrowLeft") esquerdaPressionado = true;
+        else if (e.key === "ArrowRight") direitaPressionado = true;
+    }
+  });
+  document.addEventListener("keyup", e => {
+    if (e.key === "ArrowLeft") esquerdaPressionado = false;
+    else if (e.key === "ArrowRight") direitaPressionado = false;
+  });
+
+  // --- CONTROLES DE TOQUE (TOUCH) ---
+  // Aprimoramento: Controle preciso "segue o dedo"
+  function handleTouchStart(e) {
+      if (!jogoIniciado || gameOver || faseConcluida) return;
+      // Prevenir comportamento padrão no canvas
+      if(e.target === canvas) e.preventDefault();
+  }
+
+  function handleTouchMove(e) {
+      if (!jogoIniciado || gameOver || faseConcluida) return;
+      if(e.target === canvas) e.preventDefault();
+
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      
+      // Fator de escala (caso o canvas CSS tenha tamanho diferente do canvas HTML)
+      const scaleX = canvas.width / rect.width;
+
+      // Calcula a posição do toque relativa ao canvas (escala 0 a 480)
+      const touchX = (touch.clientX - rect.left) * scaleX;
+
+      // Define a nova posição do carro baseada no toque
+      // Subtraímos metade da largura do carro para centralizá-lo no dedo
+      let novaPosicaoCarro = touchX - (carroLargura / 2);
+
+      // Limites da pista (Clamp)
+      if (novaPosicaoCarro < margemEsquerda) {
+          novaPosicaoCarro = margemEsquerda;
+      } else if (novaPosicaoCarro + carroLargura > margemDireita) {
+          novaPosicaoCarro = margemDireita - carroLargura;
+      }
+
+      // Atualiza a posição do carro diretamente
+      carroX = novaPosicaoCarro;
+  }
+
+  // Adiciona os ouvintes de evento
+  canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+  canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+  
+  canvas.addEventListener("touchend", (e) => {
+      // Opcional: Se quiser que o carro pare de receber comandos ao soltar
+      if(e.target === canvas) e.preventDefault();
+  }, { passive: false });
+
+  document.getElementById("resetRanking").addEventListener("click", () => {
+    const messageBox = document.createElement('div');
+    messageBox.style.cssText = `position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.8); color: white; padding: 20px; border-radius: 10px; z-index: 1000; text-align: center; font-size: 18px; width: 80%; max-width: 300px;`;
+    messageBox.innerHTML = `<p>Tem certeza que deseja zerar o ranking?</p><button id="confirm-reset" style="margin-right: 10px; padding: 10px 20px; background: #4CAF50; border: none; border-radius: 5px; color: white; cursor: pointer; font-size: 16px;">Sim</button><button id="cancel-reset" style="padding: 10px 20px; background: #ff4444; border: none; border-radius: 5px; color: white; cursor: pointer; font-size: 16px;">Não</button>`;
+    document.body.appendChild(messageBox);
+    document.getElementById('confirm-reset').onclick = () => {
+     
+     
+     ranking = [];
+        localStorage.removeItem("ranking");
+        atualizarRanking();
+        document.body.removeChild(messageBox);
+    };
+    document.getElementById('cancel-reset').onclick = () => document.body.removeChild(messageBox);
+  });
+  
+  function desenharObstaculo(obs) {
+    if ((obs.tipo === 'vaca' || obs.tipo === 'ovelha') && obs.imagem.complete) {
+        const frameLargura = obs.wDesenho;
+        const frameAltura = obs.hDesenho;
+        const sx = obs.frameAtual * frameLargura;
+        const sy = obs.animacaoLinha * frameAltura;
+        ctx.drawImage(obs.imagem, sx, sy, frameLargura, frameAltura, obs.x, obs.y, obs.wDesenho, obs.hDesenho);
+    } else if (obs.imagem && obs.imagem.complete) {
+        ctx.drawImage(obs.imagem, obs.x, obs.y, obs.wDesenho, obs.hDesenho);
+    } else {
+      ctx.fillStyle = "#ff3333";
+      ctx.fillRect(obs.x, obs.y, obs.wDesenho, obs.hDesenho);
+    }
+  }
+
+  function desenharPista(offset) {
+  if (currentPhase === 3) {
+    ctx.fillStyle = "#a3dfff";
+    ctx.fillRect(0, 0, margemEsquerda, canvas.height);
+    ctx.fillRect(margemDireita + 10, 0, canvas.width - margemDireita - 10, canvas.height);
+  } else if (currentPhase === 2) {
+    ctx.fillStyle = "#c2a477";
+    ctx.fillRect(0, 0, margemEsquerda, canvas.height);
+    ctx.fillRect(margemDireita + 10, 0, canvas.width - margemDireita - 10, canvas.height);
+  } else {
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  if (currentPhase === 3) {
+    ctx.fillStyle = "#d0d8de";
+  } else if (currentPhase === 2) {
+    ctx.fillStyle = "#b28c63";
+  } else {
+    ctx.fillStyle = "#444";
+  }
+  ctx.fillRect(margemEsquerda, 0, margemDireita - margemEsquerda, canvas.height);
+  ctx.fillStyle = (currentPhase === 2) ? "#a1784d" : "#888";
+  ctx.fillRect(margemEsquerda - 10, 0, 10, canvas.height);
+  ctx.fillRect(margemDireita, 0, 10, canvas.height);
+  ctx.strokeStyle = "#FFF";
+  ctx.lineWidth = 6;
+  ctx.setLineDash([40, 30]);
+  ctx.beginPath();
+  for (let y = -40 + offset; y < canvas.height; y += 40) {
+    ctx.moveTo(canvas.width / 2, y);
+    ctx.lineTo(canvas.width / 2, y + 20);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+  }
+
+  
+  function criarArbustoLateral() {
+    const lado = Math.random() < 0.5 ? "esquerda" : "direita";
+    const usarPinguim = currentPhase === 3 && Math.random() < 0.3;
+    const usarCobra = currentPhase === 2 && Math.random() < 0.04;
+    const usarServo = currentPhase === 2 && !usarCobra && Math.random() < 0.20;
+    if (usarPinguim && imagemPinguimSprite.complete && imagemPinguimSprite.naturalWidth > 0) {
+        const frameWidth = imagemPinguimSprite.width / 8;
+        const frameHeight = imagemPinguimSprite.height / 4;
+        const x = (lado === "esquerda")
+            ?
+            margemEsquerda - frameWidth - 10 + Math.random() * 10 - 5
+            : margemDireita + 10 + Math.random() * 10 - 5;
+        arvoresLaterais.push({
+            tipo: "pinguim", x, y: -frameHeight, w: frameWidth * 2, h: frameHeight * 2,
+            frame: 0, frameCount: 0, velocidadeAnimacao: 0.15, imagem: imagemPinguimSprite, linhaAnimacao: 1
+        });
+    } else if (usarCobra && imagemCobraSprite.complete && imagemCobraSprite.naturalWidth > 0) {
+        const frameWidth = imagemCobraSprite.width / 3;
+        const frameHeight = imagemCobraSprite.height / 4;
+        const x = (lado === "esquerda")
+            ?
+            margemEsquerda - frameWidth - 5 + Math.random() * 10
+            : margemDireita + 5 + Math.random() * 10;
+        arvoresLaterais.push({
+            tipo: "cobra", x, y: -frameHeight, w: frameWidth * 0.75, h: frameHeight * 0.75,
+            frame: 0, frameCount: 0, totalFrames: 3, velocidadeAnimacao: 0.1, imagem: imagemCobraSprite, linhaAnimacao: 3
+        });
+    } else if (usarServo && imagemServoSprite.complete && imagemServoSprite.naturalWidth > 0) {
+        const frameWidth = imagemServoSprite.width / 10;
+        const frameHeight = imagemServoSprite.height;
+        const x = (lado === "esquerda")
+            ?
+            margemEsquerda - frameWidth - 10 + Math.random() * 10 - 5
+            : margemDireita + 10 + Math.random() * 10 - 5;
+        arvoresLaterais.push({
+            tipo: "servo", x, y: -frameHeight, w: frameWidth, h: frameHeight,
+            frame: 0, frameCount: 0, totalFrames: 10, velocidadeAnimacao: 0.1, imagem: imagemServoSprite, linhaAnimacao: 0
+        });
+    } else {
+        let activeImageSet = (currentPhase === 1)
+            ?
+            originalTreeImages
+            : (currentPhase === 2 ? cactuImages : [...pinhoImages, mugoImage, troncoImage]);
+        const randomIndex = Math.floor(Math.random() * activeImageSet.length);
+        const imagem = activeImageSet[randomIndex];
+        const x = (lado === "esquerda")
+            ?
+            margemEsquerda - treeWidth - 10 + Math.random() * 10 - 5
+            : margemDireita + 10 + Math.random() * 10 - 5;
+        arvoresLaterais.push({ x, y: -treeHeight, w: treeWidth, h: treeHeight, imagem });
+    }
+  }
+
+
+  function atualizarEDesenharArvoresLaterais() {
+    for (let i = arvoresLaterais.length - 1; i >= 0; i--) {
+      const arvore = arvoresLaterais[i];
+      if (!gameOver && !faseConcluida && jogoIniciado) arvore.y += velocidade;
+
+      if (arvore.tipo === "pinguim" && arvore.imagem.complete) {
+        const frameWidth = imagemPinguimSprite.width / 8;
+        const frameHeight = imagemPinguimSprite.height / 4;
+        arvore.frameCount = (arvore.frameCount + arvore.velocidadeAnimacao) % 8;
+        arvore.frame = Math.floor(arvore.frameCount);
+        const sx = arvore.frame * frameWidth;
+        const sy = 1 * frameHeight;
+        ctx.drawImage(arvore.imagem, sx, sy, frameWidth, frameHeight, arvore.x, arvore.y, arvore.w, arvore.h);
+      } else if (arvore.tipo === "servo" && arvore.imagem.complete) {
+          const frameWidth = arvore.imagem.width / arvore.totalFrames;
+          const frameHeight = arvore.imagem.height;
+          arvore.frameCount = (arvore.frameCount + arvore.velocidadeAnimacao) % arvore.totalFrames;
+          arvore.frame = Math.floor(arvore.frameCount);
+          const sx = arvore.frame * frameWidth;
+          const sy = arvore.linhaAnimacao * frameHeight;
+          ctx.drawImage( arvore.imagem, sx, sy, frameWidth, frameHeight, arvore.x, arvore.y, arvore.w, arvore.h);
+      } else if (arvore.tipo === "cobra" && arvore.imagem.complete) {
+          const frameWidth = arvore.imagem.width / arvore.totalFrames;
+          const frameHeight = arvore.imagem.height / 4;
+          arvore.frameCount = (arvore.frameCount + arvore.velocidadeAnimacao) % arvore.totalFrames;
+          arvore.frame = Math.floor(arvore.frameCount);
+          const sx = arvore.frame * frameWidth;
+          const sy = arvore.linhaAnimacao * frameHeight;
+          ctx.drawImage( arvore.imagem, sx, sy, frameWidth, frameHeight, arvore.x, arvore.y, arvore.w, arvore.h);
+      } else if (arvore.imagem && arvore.imagem.complete) {
+        ctx.drawImage(arvore.imagem, arvore.x, arvore.y, arvore.w, arvore.h);
+      }
+
+      if (arvore.y > canvas.height) arvoresLaterais.splice(i, 1);
+    }
+  }
+    
+  function criarMoeda() {
+    const faixas = 4;
+    const larguraFaixa = (margemDireita - margemEsquerda) / faixas;
+    let xDesenho, yPosicao = -moedaAltura - Math.random() * 100, tentativas = 0;
+    do {
+        const faixaAleatoria = Math.floor(Math.random() * faixas);
+        xDesenho = margemEsquerda + faixaAleatoria * larguraFaixa + (larguraFaixa - moedaLargura) / 2;
+        let sobreposto = false;
+        for (const obs of obstaculos) {
+            const bufferVertical = 120, bufferHorizontal = 40;
+            if (xDesenho < obs.x + obs.wDesenho + bufferHorizontal && xDesenho + moedaLargura > obs.x - bufferHorizontal && yPosicao < obs.y + obs.hDesenho + bufferVertical && yPosicao + moedaAltura > obs.y - bufferVertical) {
+                sobreposto = true;
+                break;
+            }
+        }
+        if (!sobreposto) {
+            moedas.push({ x: xDesenho, y: yPosicao, w: moedaLargura, h: moedaAltura, currentFrame: 0, frameCounter: 0 });
+            return;
+        }
+        tentativas++;
+    } while (tentativas < 15);
+  }
+
+  function criarPistaCongelada() {
+    if (!imagemPistaCongelada.complete || imagemPistaCongelada.naturalWidth === 0) return;
+
+    const frames = 4;
+    const spriteWidth = imagemPistaCongelada.width / frames;
+    const spriteHeight = imagemPistaCongelada.height;
+    const faixas = 4;
+    const larguraFaixa = (margemDireita - margemEsquerda) / faixas;
+    const faixaAleatoria = Math.floor(Math.random() * faixas);
+    const xDesenho = margemEsquerda + faixaAleatoria * larguraFaixa + (larguraFaixa - spriteWidth) / 2;
+    const yPosicao = -spriteHeight - Math.random() * 100;
+
+    frozenPatches.push({
+        x: xDesenho, y: yPosicao, w: spriteWidth, h: spriteHeight,
+        currentFrame: 0, frameCounter: 0, totalFrames: frames
+    });
+  }
+
+  function atualizarEDesenharMoedas() {
+    for (let i = moedas.length - 1; i >= 0; i--) {
+      const moeda = moedas[i];
+      if (!gameOver && !faseConcluida && jogoIniciado) {
+        moeda.y += velocidade;
+        moeda.frameCounter = (moeda.frameCounter + CONFIG.MOEDA_ANIMATION_SPEED) % CONFIG.MOEDA_FRAMES;
+        moeda.currentFrame = Math.floor(moeda.frameCounter);
+      }
+      if (imagemMoedaSprite.complete && imagemMoedaSprite.naturalWidth > 0) {
+        ctx.drawImage(imagemMoedaSprite, moeda.x, moeda.y, moeda.w, moeda.h);
+      } else {
+        ctx.fillStyle = "yellow";
+        ctx.fillRect(moeda.x, moeda.y, moeda.w, moeda.h);
+      }
+      if (moeda.y > canvas.height) moedas.splice(i, 1);
+    }
+  }
+
+  function atualizarEDesenharPistasCongeladas() {
+    if (!imagemPistaCongelada.complete || imagemPistaCongelada.naturalWidth === 0) return;
+    const spriteWidth = imagemPistaCongelada.width / 4;
+    const spriteHeight = imagemPistaCongelada.height;
+    for (let i = frozenPatches.length - 1; i >= 0; i--) {
+        const patch = frozenPatches[i];
+        if (!gameOver && !faseConcluida && jogoIniciado) {
+            patch.y += velocidade;
+            patch.frameCounter = (patch.frameCounter + CONFIG.PISTA_CONGELADA_ANIMATION_SPEED) % patch.totalFrames;
+            patch.currentFrame = Math.floor(patch.frameCounter);
+        }
+
+        const frameX = patch.currentFrame * spriteWidth;
+        ctx.drawImage(
+            imagemPistaCongelada,
+            frameX, 0, spriteWidth, spriteHeight,
+            patch.x, patch.y, patch.w, patch.h
+        );
+        if (patch.y > canvas.height) {
+            frozenPatches.splice(i, 1);
+        }
+    }
+  }
+
+  function verificarColisaoMoeda() {
+    for (let i = moedas.length - 1; i >= 0; i--) {
+      const moeda = moedas[i];
+      if (carroX < moeda.x + moeda.w && carroX + carroLargura > moeda.x && carroY < moeda.y + moeda.h && carroY + carroAltura > moeda.y) {
+        pontuacao += CONFIG.PONTOS_MOEDA;
+        atualizarPontuacao();
+        coinSound.currentTime = 0;
+        coinSound.play().catch(e => console.log("Não foi possível tocar o som da moeda:", e));
+        moedas.splice(i, 1);
+      }
+    }
+  }
+
+  function verificarColisaoPistaCongelada() {
+    if (controlesBloqueados || gameOver || faseConcluida) return;
+    for (let i = frozenPatches.length - 1; i >= 0; i--) {
+        const patch = frozenPatches[i];
+        const hitboxWidth = patch.w * 0.4;
+        const hitboxHeight = patch.h * 0.4;
+        const hitboxX = patch.x + (patch.w - hitboxWidth) / 2;
+        const hitboxY = patch.y + (patch.h - hitboxHeight) / 2;
+        if (carroX < hitboxX + hitboxWidth && carroX + carroLargura > hitboxX && carroY < hitboxY + hitboxHeight && carroY + carroAltura > hitboxY) {
+            freioSound.currentTime = 0;
+            freioSound.play().catch(e => console.log("Não foi possível tocar o som de freio:", e));
+
+            controlesBloqueados = true;
+            frozenPatches.splice(i, 1);
+            setTimeout(() => {
+                controlesBloqueados = false;
+            }, CONFIG.DURACAO_BLOQUEIO_CONTROLE);
+            break;
+        }
+    }
+  }
+
+  function dispararRelampago() {
+    if (gameOver || faseConcluida || currentPhase !== 1) return;
+    lightningOverlay.style.opacity = '0.7';
+    thunderSound.currentTime = 0;
+    thunderSound.volume = 0.5;
+    thunderSound.play().catch(e => console.log("Não foi possível tocar o som do trovão:", e));
+    setTimeout(() => {
+        lightningOverlay.style.opacity = '0';
+    }, 120);
+    const agora = Date.now();
+    const intervaloMinimo = 7000;
+    const intervaloMaximo = 18000;
+    tempoProximoRelampago = agora + intervaloMinimo + Math.random() * (intervaloMaximo - intervaloMinimo);
+  }
+  
+  function criarObstaculoLateral() {
+    let configObstaculo;
+    if (currentPhase === 3) {
+        if (!imagemUrsoPolarSprite.complete || imagemUrsoPolarSprite.naturalWidth === 0) return;
+        configObstaculo = {
+            tipo: 'urso_polar', imagem: imagemUrsoPolarSprite, totalFrames: 3, numLinhasAnimacao: 4,
+            linhaAnimacao: 3, velocidadeXBase: 2, escalaColisao: 0.4, offsetXColisao: 0.3, offsetYColisao: 0.3
+        };
+    } else if (currentPhase === 2) {
+        if (!imagemCavaloSprite.complete || imagemCavaloSprite.naturalWidth === 0) return;
+        configObstaculo = {
+            tipo: 'cavalo', imagem: imagemCavaloSprite, totalFrames: 6, numLinhasAnimacao: 1,
+            linhaAnimacao: 0, velocidadeXBase: 2, escalaColisao: 0.8, offsetXColisao: 0.1, offsetYColisao: 0.1
+        };
+    } else {
+        return;
+    }
+
+    const frameLargura = configObstaculo.imagem.width / configObstaculo.totalFrames;
+    const frameAltura = configObstaculo.imagem.height / configObstaculo.numLinhasAnimacao;
+    const direcao = Math.random() < 0.5 ? 'direita' : 'esquerda';
+    const yPos = Math.random() * (canvas.height - 400);
+    let xPos, velocidadeX;
+
+    if (direcao === 'direita') {
+        xPos = -frameLargura;
+        velocidadeX = configObstaculo.velocidadeXBase;
+    } else { 
+        xPos = canvas.width;
+        velocidadeX = -configObstaculo.velocidadeXBase;
+    }
+    
+    const wDesenho = frameLargura * 1.6;
+    const hDesenho = frameAltura * 1.6;
+    const wColisao = wDesenho * configObstaculo.escalaColisao;
+    const hColisao = hDesenho * configObstaculo.escalaColisao;
+    const xColisao = xPos + (wDesenho * configObstaculo.offsetXColisao);
+    const yColisao = yPos + (hDesenho * configObstaculo.offsetYColisao);
+
+    obstaculosLaterais.push({
+        tipo: configObstaculo.tipo, x: xPos, y: yPos, velocidadeX, direcao, wDesenho, hDesenho, xColisao,
+        yColisao, wColisao, hColisao, imagem: configObstaculo.imagem, totalFrames: configObstaculo.totalFrames,
+        linhaAnimacao: configObstaculo.linhaAnimacao, numLinhasAnimacao: configObstaculo.numLinhasAnimacao,
+        frameAtual: 0, frameCounter: 0, velocidadeAnimacao: 0.15,
+        offsetXColisao: configObstaculo.offsetXColisao, offsetYColisao: configObstaculo.offsetYColisao
+    });
+  }
+
+
+  function atualizarEDesenharObstaculosLaterais() {
+    for (let i = obstaculosLaterais.length - 1; i >= 0; i--) {
+        const obs = obstaculosLaterais[i];
+        if (!gameOver && !faseConcluida && jogoIniciado) {
+            obs.x += obs.velocidadeX;
+            obs.y += velocidade;
+            obs.xColisao = obs.x + (obs.wDesenho * obs.offsetXColisao);
+            obs.yColisao = obs.y + (obs.hDesenho * obs.offsetYColisao);
+            obs.frameCounter = (obs.frameCounter + obs.velocidadeAnimacao) % obs.totalFrames;
+            obs.frameAtual = Math.floor(obs.frameCounter);
+        }
+
+        const frameLargura = obs.imagem.width / obs.totalFrames;
+        const frameAltura = obs.imagem.height / obs.numLinhasAnimacao;
+        const sx = obs.frameAtual * frameLargura;
+        const sy = obs.linhaAnimacao * frameAltura;
+
+        ctx.save();
+        try {
+            if (obs.direcao === 'direita') {
+                ctx.scale(-1, 1);
+                ctx.drawImage(obs.imagem, sx, sy, frameLargura, frameAltura, -obs.x - obs.wDesenho, obs.y, obs.wDesenho, obs.hDesenho);
+            } else {
+                ctx.drawImage(obs.imagem, sx, sy, frameLargura, frameAltura, obs.x, obs.y, obs.wDesenho, obs.hDesenho);
+            }
+        } finally {
+            ctx.restore();
+        }
+
+        if (obs.x > canvas.width + obs.wDesenho || obs.x < -obs.wDesenho * 2 || obs.y > canvas.height) {
+            obstaculosLaterais.splice(i, 1);
+        }
+    }
+  }
+
+  function criarObstaculo() {
+    const larguraBaseObstaculo = 60, alturaBaseObstaculo = 60, faixas = 4;
+    const larguraFaixa = (margemDireita - margemEsquerda) / faixas;
+    const qtdObstaculos = Math.floor(Math.random() * 3) + 1;
+    let imagemAtualObstaculo, larguraDesenho, alturaDesenho, larguraColisao, alturaColisao, offsetXColisao = 0, offsetYColisao = 0;
+    if (qtdObstaculos === 3) {
+      if (currentPhase === 3) imagemAtualObstaculo = new Image(), imagemAtualObstaculo.src = "assets/img/barreira1.png";
+      else imagemAtualObstaculo = (currentPhase === 2) ? imagemBarreiraVelha : imagemBarreira;
+      larguraDesenho = larguraBaseObstaculo * 1.3, alturaDesenho = alturaBaseObstaculo * 1.3;
+      larguraColisao = larguraDesenho * 0.8, alturaColisao = alturaDesenho * 0.2;
+      offsetXColisao = (larguraDesenho - larguraColisao) / 2, offsetYColisao = alturaDesenho * 0.7;
+    } else {
+        if (currentPhase === 2 && Math.random() < 0.15 && imagemVacaSprite.complete && imagemVacaSprite.naturalWidth > 0) {
+            const vacaFrameLargura = imagemVacaSprite.width / 4;
+            const vacaFrameAltura = imagemVacaSprite.height / 4;
+            const faixa = Math.floor(Math.random() * faixas);
+            const xDesenho = margemEsquerda + faixa * larguraFaixa + (larguraFaixa - vacaFrameLargura) / 2;
+            obstaculos.push({
+                tipo: 'vaca', x: xDesenho, y: -vacaFrameAltura, wDesenho: vacaFrameLargura, hDesenho: vacaFrameAltura,
+                xColisao: xDesenho + (vacaFrameLargura * 0.3), yColisao: -vacaFrameAltura + (vacaFrameAltura * 0.3),
+                wColisao: vacaFrameLargura * 0.4, hColisao: vacaFrameAltura * 0.4, imagem: imagemVacaSprite,
+                animacaoLinha: 1, totalFrames: 4, frameAtual: 0, frameCounter: 
+                0, velocidadeAnimacao: 0.1
+            });
+            return;
+        }
+
+      if (currentPhase === 2 && Math.random() < 0.15 && imagemOvelhaSprite.complete && imagemOvelhaSprite.naturalWidth > 0) {
+        const ovelhaFrameLargura = imagemOvelhaSprite.width / 4;
+        const ovelhaFrameAltura = imagemOvelhaSprite.height / 4;
+        const faixa = Math.floor(Math.random() * faixas);
+        const xDesenho = margemEsquerda + faixa * larguraFaixa + (larguraFaixa - ovelhaFrameLargura) / 2;
+        obstaculos.push({
+            tipo: 'ovelha', x: xDesenho, y: -ovelhaFrameAltura, wDesenho: ovelhaFrameLargura, hDesenho: ovelhaFrameAltura,
+            xColisao: xDesenho + (ovelhaFrameLargura * 0.3), yColisao: -ovelhaFrameAltura + (ovelhaFrameAltura * 0.3), 
+            wColisao: ovelhaFrameLargura * 0.4, hColisao: ovelhaFrameAltura * 0.4, imagem: imagemOvelhaSprite,
+            animacaoLinha: 3, totalFrames: 4, frameAtual: 0, frameCounter: 0, velocidadeAnimacao: 0.1
+        });
+        return;
+      }
+      if (currentPhase === 2 && Math.random() < 0.15 && imagemOvelhaSprite.complete && imagemOvelhaSprite.naturalWidth > 0) {
+          const ovelhaFrameLargura = imagemOvelhaSprite.width / 4, ovelhaFrameAltura = imagemOvelhaSprite.height / 4;
+          const faixa = Math.floor(Math.random() * faixas);
+          const xDesenho = margemEsquerda + faixa * larguraFaixa + (larguraFaixa - ovelhaFrameLargura) / 2;
+          obstaculos.push({
+              tipo: 'ovelha', x: xDesenho, y: -ovelhaFrameAltura, wDesenho: ovelhaFrameLargura, hDesenho: ovelhaFrameAltura,
+              xColisao: xDesenho + (ovelhaFrameLargura * 0.3), yColisao: -ovelhaFrameAltura + (ovelhaFrameAltura * 0.3), 
+              wColisao: ovelhaFrameLargura * 0.4, hColisao: ovelhaFrameAltura * 0.4, imagem: imagemOvelhaSprite,
+              animacaoLinha: 3, totalFrames: 4, frameAtual: 0, frameCounter: 0, velocidadeAnimacao: 0.1
+           });
+          return;
+      }
+      
+      if (currentPhase === 3) {
+        imagemAtualObstaculo = Math.random() < 0.4 ?
+        imagemBonecoGelo : imagemGelo;
+      } else {
+        imagemAtualObstaculo = imagemPedra;
+      }
+      
+      larguraDesenho = larguraBaseObstaculo * 0.8, alturaDesenho = alturaBaseObstaculo * 0.8;
+      larguraColisao = larguraDesenho * 0.6, alturaColisao = alturaDesenho * 0.3;
+      offsetXColisao = (larguraDesenho - larguraColisao) / 2, offsetYColisao = alturaDesenho * 0.6;
+    }
+
+    const faixasBloqueadas = [];
+    while (faixasBloqueadas.length < qtdObstaculos) {
+      const faixa = Math.floor(Math.random() * faixas);
+      if (!faixasBloqueadas.includes(faixa)) faixasBloqueadas.push(faixa);
+    }
+    for (let faixa of faixasBloqueadas) {
+      const xDesenho = margemEsquerda + faixa * larguraFaixa + (larguraFaixa - larguraDesenho) / 2;
+      if (imagemAtualObstaculo && imagemAtualObstaculo.complete && imagemAtualObstaculo.naturalWidth > 0) {
+        obstaculos.push({ x: xDesenho, y: -alturaDesenho, wDesenho: larguraDesenho, hDesenho: alturaDesenho, xColisao: xDesenho + offsetXColisao, yColisao: -alturaDesenho + offsetYColisao, wColisao: larguraColisao, hColisao: alturaColisao, imagem: imagemAtualObstaculo });
+      }
+    }
+  }
+
+  function atualizarObstaculos() {
+    for (let i = obstaculos.length - 1; i >= 0; i--) {
+      const obs = obstaculos[i];
+      if (!gameOver && !faseConcluida && jogoIniciado) {
+        obs.y += velocidade;
+        obs.yColisao += velocidade;
+        if (obs.tipo === 'vaca' || obs.tipo === 'ovelha') {
+          obs.frameCounter = (obs.frameCounter + obs.velocidadeAnimacao) % obs.totalFrames;
+          obs.frameAtual = Math.floor(obs.frameCounter);
+        }
+      }
+      if (obs.y > canvas.height) {
+        obstaculos.splice(i, 1);
+        pontuacao++;
+        atualizarPontuacao();
+        if (pontuacao > 0 && pontuacao % CONFIG.PONTOS_PARA_DIFICULDADE === 0) velocidade += CONFIG.INCREMENTO_VELOCIDADE;
+      }
+    }
+  }
+
+  function iniciarEfeitoBlink() {
+    carSound.pause(), carSound.currentTime = 0;
+    currentThemeSound.pause(), currentThemeSound.currentTime = 0;
+    menuMusicSound.pause(), menuMusicSound.currentTime = 0;
+    transitionMusicSoundPhase1.pause(), transitionMusicSoundPhase1.currentTime = 0;
+    musicaTransitionSoundPhase2.pause(), musicaTransitionSoundPhase2.currentTime = 0;
+    crashSound.currentTime = 0;
+    crashSound.play().catch(e => console.log("Não foi possível tocar o som de crash:", e));
+    blinkCount = 0;
+    if (blinkInterval) clearInterval(blinkInterval);
+    blinkInterval = setInterval(() => {
+        carroVisivel = !carroVisivel;
+        blinkCount++;
+        if (blinkCount >= 6) {
+            clearInterval(blinkInterval);
+            blinkInterval = null;
+            carroVisivel = true;
+            
+            if (vidas > 0) {
+                gameOverSound.currentTime = 0;
+                gameOverSound.play().catch(e => console.log("Não foi possível tocar o som de Game Over:", e));
+                exibirGameOver = true;
+                
+                setTimeout(() => {
+ 
+                    jogoIniciado = false;
+                    exibirGameOver = false;
+                    carSound.pause();
+                    currentThemeSound.pause();
+                 
+    
+                    document.getElementById('sunlight-overlay').style.display = 'none';
+                    // Fundo garagem dinâmica
+                    document.getElementById('game-container').style.backgroundImage = `url('${obterCaminhoImagem("fundo_garagem.png")}')`;
+                    vehicleSidebar.style.display = 'flex';
+                    rankingElement.style.display = 'flex';
+                    canvas.style.display = 'none';
+                    sandstormCanvas.style.display = 'none';
+                    
+                    menuMusicSound.currentTime = 0;
+                    menuMusicSound.play().catch(e => console.log("Não foi possível tocar a música do menu:", e));
+                }, 2500);
+            } else {
+                // Pontuação extra por fase
+  let bonus = 0;
+  if (currentPhase === 1) bonus = 20;
+  else if (currentPhase === 2) bonus = 40;
+  else if (currentPhase === 3) bonus = 60;
+
+  pontuacao += bonus;
+  atualizarPontuacao();
+
+  salvarNoRanking(currentPlayerInitials, pontuacao);
+                executarFinalGameOver();
+            }
+        }
+    }, 200);
+  }
+
+  function verificarColisao() {
+    if (gameOver || faseConcluida || !jogoIniciado) return;
+    for (const obs of obstaculos) {
+      if (carroX < obs.xColisao + obs.wColisao && carroX + carroLargura > obs.xColisao && carroY < obs.yColisao + obs.hColisao && carroY + carroAltura > obs.yColisao) {
+        gameOver = true;
+        vidas--;
+        atualizarVidasDisplay();
+        rainSound.pause(); rainSound.currentTime = 0;
+        iniciarEfeitoBlink();
+        return;
+      }
+    }
+    for (const obs of obstaculosLaterais) {
+        if (carroX < obs.xColisao + obs.wColisao && carroX + carroLargura > obs.xColisao && carroY < obs.yColisao + obs.hColisao && carroY + carroAltura > obs.yColisao) {
+            gameOver = true;
+            vidas--;
+            atualizarVidasDisplay();
+            rainSound.pause(); rainSound.currentTime = 0;
+            iniciarEfeitoBlink();
+            return;
+        }
+    }
+  }
+
+  function desenharGameOver() {
+    if (!exibirGameOver) return;
+    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "white";
+    ctx.font = "40px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("Chama o Guincho!", canvas.width / 2, canvas.height / 2 - 20);
+  }
+  
+  function desenharLinhaDeChegada() {
+    if (!linhaDeChegada) return;
+    const tamanhoQuadrado = 20, larguraPista = margemDireita - margemEsquerda;
+    const numQuadrados = larguraPista / tamanhoQuadrado;
+    for (let i = 0; i < numQuadrados; i++) {
+      ctx.fillStyle = (i % 2 === 0) ?
+      "white" : "black";
+      ctx.fillRect(margemEsquerda + (i * tamanhoQuadrado), linhaDeChegada.y, tamanhoQuadrado, tamanhoQuadrado);
+      ctx.fillStyle = (i % 2 === 0) ?
+      "black" : "white";
+      ctx.fillRect(margemEsquerda + (i * tamanhoQuadrado), linhaDeChegada.y + tamanhoQuadrado, tamanhoQuadrado, tamanhoQuadrado);
+    }
+  }
+  
+  function finalizarFaseComVitoria() {
+    if (faseConcluida) return;
+    faseConcluida = true;
+    jogoIniciado = false;
+    carSound.pause(); 
+    currentThemeSound.pause(); 
+    rainSound.pause(); 
+    rainSound.currentTime = 0;
+    
+    // Pontuação extra por fase
+  let bonus = 0;
+  if (currentPhase === 1) bonus = 20;
+  else if (currentPhase === 2) bonus = 40;
+  else if (currentPhase === 3) bonus = 60;
+
+  pontuacao += bonus;
+  atualizarPontuacao();
+
+  salvarNoRanking(currentPlayerInitials, pontuacao);
+
+    if (currentPhase === 3) {
+        finalWinSound.currentTime = 0;
+        finalWinSound.play().catch(e => console.log("Não foi possível tocar o som de vitória:", e));
+        musicaVoceVenceuSound.currentTime = 0;
+        setTimeout(() => {
+            victoryScreen.style.display = 'block';
+            victoryScreenBackground.classList.remove('fade-out');
+            
+            // Background vitória dinâmica
+            document.getElementById('victory-screen-background').style.backgroundImage = `url('${obterCaminhoImagem("voce_venceu.png")}')`;
+            
+            startConfetti();
+
+            musicaVoceVenceuSound.currentTime = 0;
+            musicaVoceVenceuSound.play().catch(e => console.log("Não foi possível tocar a música de vitória final:", e));
+        }, 4000);
+        setTimeout(() => {
+            victoryScreenBackground.classList.add('fade-out');
+        }, 19000);
+        setTimeout(() => {
+            stopConfetti();
+            victoryScreen.style.display = 'none';
+            finalWinSound.pause();
+            musicaVoceVenceuSound.pause();
+
+            endingVideo.style.display = 'block';
+            endingVideo.currentTime = 0;
+     
+             endingVideo.play().catch(e => 
+             console.log("Não foi possível tocar o vídeo de encerramento:", e));
+
+            setTimeout(() => {
+                endingVideo.style.display = 'none';
+                endingVideo.pause();
+                // Background garagem dinâmica
+                document.getElementById('game-container').style.backgroundImage = `url('${obterCaminhoImagem("fundo_garagem.png")}')`;
+           
+               
+                 currentPhase = 1;
+                document.getElementById('game-container').style.display = 'none';
+                document.getElementById('start-screen').style.display = 'flex';
+                // Atualizar BG start screen
+                document.getElementById('start-screen').style.backgroundImage = `url('${obterCaminhoImagem("fundo_tela_apresentacao.png")}')`;
+                
+                vehicleSidebar.style.display = 'none';
+                rankingElement.style.display = 'none';
+     
+                canvas.style.display = 'none';
+  
+                sandstormCanvas.style.display = 'none';
+            }, 48000);
+        }, 20000);
+
+    } else {
+        finalWinSound.currentTime = 0;
+        finalWinSound.play().catch(e => console.log("Não foi possível tocar o som de vitória:", e));
+        setTimeout(() => {
+          finalWinSound.pause();
+          currentPhase++;
+          
+          document.getElementById('sunlight-overlay').style.display = 'none';
+          document.getElementById('game-container').style.backgroundImage = `url('${obterCaminhoImagem("fundo_garagem.png")}')`;
+          vehicleSidebar.style.display = 'flex';
+          rankingElement.style.display = 'flex';
+          canvas.style.display = 'none', sandstormCanvas.style.display = 'none';
+     
+      
+          menuMusicSound.currentTime = 0;
+          menuMusicSound.play().catch(e => console.log("Não foi possível tocar a música do menu:", e));
+          startButton.disabled = false;
+          startButton.style.visibility = 'visible';
+        }, 4000);
+    }
+  }
+
+  function executarFinalGameOver() {
+    setTimeout(() => {
+        canvas.style.display = 'none';
+        document.getElementById('sunlight-overlay').style.display = 'none';
+        sandstormCanvas.style.display = 'none';
+        rankingElement.style.display = 'none';
+        
+        // Background garagem dinâmica
+        document.getElementById('game-container').style.backgroundImage = `url('${obterCaminhoImagem("fundo_garagem.png")}')`;
+        document.getElementById('game-container').style.display = 'none';
+
+        const gameOverImg = document.getElementById('final-game-over-img');
+        gameOverImg.src = obterCaminhoImagem("tela_game_over.png");
+
+        finalGameOverScreen.style.display = 'flex';
+        finalGameOverScreen.style.opacity = 1;
+       
+         gameOverSound2.currentTime = 0;
+        gameOverSound2.play().catch(e => console.log("Erro ao tocar game_over2.mp3", e));
+
+        setTimeout(() => {
+            finalGameOverScreen.style.transition = 'opacity 1s';
+            finalGameOverScreen.style.opacity = 0;
+
+            setTimeout(() => {
+                finalGameOverScreen.style.display = 'none';
+                document.getElementById('start-screen').style.display = 'flex';
+                // Atualiza BG
+                document.getElementById('start-screen').style.backgroundImage = `url('${obterCaminhoImagem("fundo_tela_apresentacao.png")}')`;
+                currentPhase = 1;
+            }, 1000);
+
+        }, 12000);
+
+    }, 3000);
+  }
+
+  function loopJogo(timestamp) {
+    if (!jogoIniciado) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    desenharPista(offsetLinhas);
+    atualizarEDesenharArvoresLaterais();
+    if (linhaDeChegada) desenharLinhaDeChegada();
+
+    obstaculos.forEach(desenharObstaculo);
+    atualizarEDesenharMoedas();
+    if(currentPhase === 3) atualizarEDesenharPistasCongeladas();
+    atualizarEDesenharObstaculosLaterais(); 
+    desenharCarro(carroX, carroY);
+    if (gameOver) {
+        desenharGameOver();
+    } else if (faseConcluida) {
+        // Jogo parado
+    } else {
+        const agora = Date.now();
+        if (agora - ultimoObstaculoLateral > 15000 && !linhaDeChegada) {
+            criarObstaculoLateral();
+            ultimoObstaculoLateral = agora;
+        }
+
+        offsetLinhas = (offsetLinhas + velocidade) % 40;
+        if (controlesBloqueados) {
+            let offsetX = (Math.random() - 0.5) * CONFIG.VIBRATION_INTENSITY;
+            carroX += offsetX;
+            if (carroX < margemEsquerda) carroX = margemEsquerda;
+            if (carroX + carroLargura > margemDireita) carroX = margemDireita - carroLargura;
+        } else {
+            // MANTENHA O CÓDIGO DO TECLADO AQUI
+            // O código de toque novo já atualizou 'carroX' diretamente no evento touchmove.
+            // O teclado continua somando velocidade se as teclas estiverem pressionadas.
+            if (esquerdaPressionado && carroX > margemEsquerda) carroX -= CONFIG.VELOCIDADE_LATERAL_CARRO;
+            if (direitaPressionado && carroX + carroLargura < margemDireita) carroX += CONFIG.VELOCIDADE_LATERAL_CARRO;
+        }
+
+        if (currentPhase === 1 && (agora - tempoInicioFase > 24000)) {
+            if (tempoProximoRelampago === 0) {
+                tempoProximoRelampago = agora;
+            }
+
+            if (agora > tempoProximoRelampago) {
+                dispararRelampago();
+            }
+        }
+
+        let currentPhaseDuration;
+        if (currentPhase === 1) {
+            currentPhaseDuration = CONFIG.DURACAO_FASE_1;
+        } else if (currentPhase === 2) {
+            currentPhaseDuration = CONFIG.DURACAO_FASE_2;
+        } else {
+            currentPhaseDuration = CONFIG.DURACAO_FASE_3;
+        }
+
+        if (tempoInicioFase && (agora - tempoInicioFase > currentPhaseDuration) && !linhaDeChegada) {
+            linhaDeChegada = { y: -40, altura: 40 };
+        }
+
+        if (linhaDeChegada) linhaDeChegada.y += velocidade;
+        if (!chuvaAtiva && currentPhase === 1 && (agora - tempoInicioFase > 20000)) {
+            iniciarChuva();
+            criarChuva();
+        }
+        if (agora - ultimoSpawnArvore > CONFIG.INTERVALO_ARVORES) {
+            criarArbustoLateral();
+            ultimoSpawnArvore = agora;
+        }
+        if (agora - ultimoObstaculo > CONFIG.INTERVALO_OBSTACULOS && !linhaDeChegada) {
+            criarObstaculo();
+            ultimoObstaculo = agora;
+        }
+        if (agora - ultimaMoeda > CONFIG.INTERVALO_MOEDAS) {
+            criarMoeda();
+            ultimaMoeda = agora;
+        }
+        if (currentPhase === 3 && agora - ultimoSpawnPistaCongelada > CONFIG.INTERVALO_PISTA_CONGELADA && !linhaDeChegada) {
+            criarPistaCongelada();
+            ultimoSpawnPistaCongelada = agora;
+        }
+
+        atualizarObstaculos();
+        verificarColisao();
+        verificarColisaoMoeda();
+        if(currentPhase === 3) verificarColisaoPistaCongelada();
+        if (linhaDeChegada && carroY < linhaDeChegada.y) finalizarFaseComVitoria();
+    }
+    
+    if (chuvaAtiva && currentPhase === 1 && !gameOver && !faseConcluida && jogoIniciado) atualizarEDesenharChuva();
+    if (currentPhase === 3 && !gameOver && !faseConcluida && jogoIniciado) {
+      atualizarEDesenharNeve();
+    }
+    
+    inicioChuvaTempo = null;
+    gameFrameId = requestAnimationFrame(loopJogo);
+  }
+
+  function carregarTodasImagens() {
+    let loadedCount = 0;
+    
+    const allImagesToLoad = [
+      ...imagensCarrosDisponiveis.map(car => car.image),
+      ...imagensCarrosDisponiveis.map(car => car.driverImage),
+      imagemPedra, imagemBarreira, imagemBarreiraVelha, imagemMoedaSprite, imagemVacaSprite, imagemOvelhaSprite,
+      imagemCavaloSprite, imagemUrsoPolarSprite, imagemGelo, imagemBonecoGelo, imagemServoSprite,
+      ...originalTreeImages, ...cactuImages, imageTransitionPhase2, imagemCobraSprite, imagemPistaCongelada
+    ];
+    const allSoundsToLoad = [
+      crashSound, carSound, themeSoundPhase1, gameOverSound, coinSound, clickSound, pingSound, startSound, 
+      ligarCarroSound, menuMusicSound, transitionMusicSoundPhase1, musicaTransitionSoundPhase2, finalWinSound, themeSoundPhase2,
+      themeSoundPhase3, musicaTransitionSoundPhase3, freioSound, musicaVoceVenceuSound, thunderSound, gameOverSound2
+    ];
+    const totalResources = allImagesToLoad.length + allSoundsToLoad.length;
+
+    return new Promise((resolve, reject) => {
+        if (totalResources === 0) return resolve();
+        const checkCompletion = () => { if (++loadedCount === totalResources) resolve(); };
+        const handleError = (src) => { console.error(`Falha ao carregar recurso: ${src}`); checkCompletion(); };
+
+        allImagesToLoad.forEach(img => { img.onload = checkCompletion; img.onerror = () => handleError(img.src); });
+        imagensCarrosDisponiveis.forEach(car => { car.image.src = car.src; car.driverImage.src = car.driverSrc; });
+
+ 
+        imagemPedra.src = "assets/img/pedra.png";
+        imagemBarreira.src = "assets/img/barreira.png";
+        imagemBarreiraVelha.src = "assets/img/barreira_velha.png";
+        imagemVacaSprite.src = "assets/img/vaca_sprite.png";
+        imagemOvelhaSprite.src = "assets/img/ovelha_sprite.png";
+        imagemCavaloSprite.src = "assets/img/cavalo_sprite.png";
+        imagemUrsoPolarSprite.src = "assets/img/polar_bear.png";
+        imagemGelo.src = "assets/img/gelo1.png";
+        imagemBonecoGelo.src = "assets/img/boneco_gelo.png";
+        imagemMoedaSprite.src = "assets/img/coin.png";
+        imagemServoSprite.src = "assets/img/servo.png";
+        imagemCobraSprite.src = "assets/img/cobra.png";
+        imagemPistaCongelada.src = "assets/img/pista_congelada.png";
+        originalTreeImages[0].src = 'assets/img/tree1.png';
+        originalTreeImages[1].src = 'assets/img/tree2.png';
+        originalTreeImages[2].src = 'assets/img/tree3.png';
+        originalTreeImages[3].src = 'assets/img/cogumelos.png';
+        originalTreeImages[4].src = 'assets/img/samambaia.png';
+        cactuImages.forEach((img, i) => img.src = `assets/img/cactu${i + 1}.png`);
+        pinhoImages.forEach((img, i) => img.src = `assets/img/pinho${i + 1}.png`);
+        imagemPinguimSprite.src = "assets/img/pinguim.png";
+        mugoImage.src = "assets/img/mugo.png";
+        troncoImage.src = "assets/img/tronco.png";
+        imageTransitionPhase2.src = 'assets/img/transicao_fase_2.png';
+        
+        // As transições agora são dinâmicas via JS
+        
+        allSoundsToLoad.forEach(audio => {
+            if (audio.readyState >= 2) checkCompletion();
+            else {
+                audio.oncanplaythrough = checkCompletion;
+                audio.onerror = () => handleError(audio.src);
+                audio.load();
+      
+      
+             }
+         });
+    });
+  }
+
+  function exibirPainelSelecaoVeiculo() {
+    carOptionsContainer.innerHTML = '';
+    imagensCarrosDisponiveis.forEach(carInfo => {
+      const div = document.createElement('div');
+      div.className = 'car-option';
+      div.dataset.carId = carInfo.id;
+      div.innerHTML = `<div class="car-driver-wrapper"><img src="${carInfo.src}" alt="Carro ${carInfo.id}" class="car-image"><img src="${carInfo.driverSrc}" alt="Piloto ${carInfo.name}" class="driver-image"></div><span class="driver-name">${carInfo.name}</span>`;
+      carOptionsContainer.appendChild(div);
+      div.addEventListener('mouseenter', () => { clickSound.currentTime = 0; clickSound.play().catch(e => {}); });
+      div.addEventListener('click', () => {
+        document.querySelectorAll('.car-option').forEach(opt => opt.classList.remove('selected'));
+        div.classList.add('selected');
+      
+      
+        carroSelecionadoId = carInfo.id;
+        imagemCarroAtual = carInfo.image;
+        pingSound.currentTime = 0;
+        pingSound.play().catch(e => {});
+      });
+    });
+    if (imagensCarrosDisponiveis.length > 0) {
+        const firstCar = imagensCarrosDisponiveis[0];
+        carroSelecionadoId = firstCar.id;
+        imagemCarroAtual = firstCar.image;
+        const defaultCarOption = carOptionsContainer.querySelector(`[data-car-id="${firstCar.id}"]`);
+        if (defaultCarOption) defaultCarOption.classList.add('selected');
+        startButton.disabled = false;
+    } else {
+        startButton.disabled = true;
+    }
+  }
+
+  function startButtonBlinkEffect() {
+    return new Promise(resolve => {
+        let blinks = 0;
+        startButton.classList.add('blinking-button');
+        const intervalId = setInterval(() => {
+            if (++blinks >= 6) {
+                clearInterval(intervalId);
+                startButton.classList.remove('blinking-button');
+      
+      
+                 startButton.style.visibility = 'visible';
+                resolve();
+            }
+        }, 200);
+   });
+  }
+
+  startButton.addEventListener('click', async () => {
+      const initialsInput = document.getElementById('playerInitials');
+      const initials = initialsInput.value.trim().toUpperCase();
+
+      if (initials.length === 0) {
+          alert("Por favor, digite suas iniciais para continuar.");
+          return;
+      }
+      
+      currentPlayerInitials = initials;
+
+      if (carroSelecionadoId && imagemCarroAtual && imagemCarroAtual.complete && imagemCarroAtual.naturalWidth > 0) {
+          startButton.disabled = true;
+          ligarCarroSound.currentTime = 0;
+          ligarCarroSound.play().catch(e => {});
+          await startButtonBlinkEffect();
+          vehicleSidebar.style.display = 'none'; 
+          rankingElement.style.display = 'none'; 
+
+     
+      
+      let activeTransitionScreen, activeTransitionMusic, transitionDuration;
+
+          if (currentPhase === 1) {
+              activeTransitionScreen = transitionScreenPhase1;
+              activeTransitionMusic = transitionMusicSoundPhase1;
+              transitionDuration = 4000;
+          } else if (currentPhase === 2) {
+             
+             
+             activeTransitionScreen = transitionScreenPhase2;
+   
+              activeTransitionMusic = musicaTransitionSoundPhase2;
+              transitionDuration = 4000;
+          } else {
+              activeTransitionScreen = transitionScreenPhase3;
+              activeTransitionMusic = musicaTransitionSoundPhase3;
+              transitionDuration = 4500;
+          }
+          
+          activeTransitionScreen.style.display = 'block';
+          menuMusicSound.pause();
+          menuMusicSound.currentTime = 0;
+          activeTransitionMusic.currentTime = 0;
+          activeTransitionMusic.play().catch(e => {});
+          setTimeout(() => {
+              activeTransitionScreen.style.display = 'none';
+              activeTransitionMusic.pause();
+              activeTransitionMusic.currentTime = 0;
+              reiniciarJogo();
+              if (window.innerWidth > 900) {
+                 rankingElement.style.display = 'flex';
+              }
+              startButton.disabled = false;
+      
+      
+    
+    }, transitionDuration);
+    } else {
+          console.warn("Tentativa de iniciar jogo sem carro selecionado ou imagem carregada.");
+    }
+  });
+
+  const startScreen = document.getElementById('start-screen');
+  const startGameButton = document.getElementById('start-game-button');
+  const gameContainer = document.getElementById('game-container');
+
+  loadingScreen.style.display = 'flex';
+  startScreen.style.display = 'none';
+  gameContainer.style.display = 'none';
+  
+  carregarTodasImagens().then(() => {
+    loadingScreen.style.display = 'none';
+    startScreen.style.display = 'flex';
+    menuMusicSound.load();
+    
+    // Aplicar backgrounds iniciais dinamicamente
+    aplicarImagensEstaticas();
+
+  }).catch(error => {
+    console.error("Erro crítico no carregamento de recursos:", error);
+    loadingScreen.innerHTML = "Erro ao carregar. Verifique o console. (Dica: verifique se as pastas assets/img, assets/audio e assets/video existem)";
+  });
+
+  startGameButton.addEventListener('click', () => {
+    startScreen.style.display = 'none';
+    gameContainer.style.display = 'grid'; // alterado de flex para grid para respeitar layout mobile
+    vehicleSidebar.style.display = 'flex';
+    rankingElement.style.display = 'flex';
+    canvas.style.display = 'none';
+    sandstormCanvas.style.display = 'none';
+    exibirPainelSelecaoVeiculo();
+    atualizarRanking();
+    
+    vidas = 4;
+    atualizarVidasDisplay();
+    
+    currentSessionId = Date.now().toString();
+    
+    document.getElementById('playerInitials').value = '';
+    currentPlayerInitials = '';
+
+    menuMusicSound.currentTime = 0;
+    menuMusicSound.play().catch(e => {});
+  });
+  chuvaAtiva = false;
+    inicioChuvaTempo = null;
+    gameFrameId = requestAnimationFrame(loopJogo);
+
+})();
+</script>
+</body>
+</html>
