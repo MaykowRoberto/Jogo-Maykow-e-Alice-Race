@@ -786,12 +786,13 @@
     DURACAO_BLOQUEIO_CONTROLE: 400,
     VIBRATION_INTENSITY: 4,
     PISTA_CONGELADA_ANIMATION_SPEED: 0.1,
+    VIBRATION_PATTERN: [50, 50, 50, 50], // Padrão de vibração: vibrar 50ms, pausar 50ms, vibrar 50ms, pausar 50ms
   };
 
   // Configurações para Mobile (mais fácil)
   const CONFIG_MOBILE = {
     VELOCIDADE_INICIAL: 3.5,
-    INCREMENTO_VELOCIDADE: 0.4,
+    INCREMENTO_VELOCIDADE: 0.5,
     INTERVALO_OBSTACULOS: 1500,
     INTERVALO_ARVORES: 500,
     PONTOS_PARA_DIFICULDADE: 10,
@@ -804,13 +805,14 @@
     MOEDA_FRAMES: 1,
     MOEDA_ANIMATION_SPEED: 0.1,
     BLINK_START_BUTTON_DURATION: 1200,
-    DURACAO_FASE_1: 75000,
-    DURACAO_FASE_2: 90000,
+    DURACAO_FASE_1: 750,
+    DURACAO_FASE_2: 900,
     DURACAO_FASE_3: 105000,
     INTERVALO_PISTA_CONGELADA: 8000,
-    DURACAO_BLOQUEIO_CONTROLE: 900,
-    VIBRATION_INTENSITY: 4,
+    DURACAO_BLOQUEIO_CONTROLE: 400,
+    VIBRATION_INTENSITY: 3,
     PISTA_CONGELADA_ANIMATION_SPEED: 0.1,
+    VIBRATION_PATTERN: [50, 50, 50, 50], // Padrão de vibração para mobile
   };
 
   // Usar configuração apropriada
@@ -834,6 +836,41 @@
 
   // Listener para mudança de tamanho/tela
   window.addEventListener('resize', atualizarConfiguracoesPorDispositivo);
+
+  // --- FUNÇÕES DE VIBRAÇÃO ---
+  function vibrarDispositivo() {
+    // Verifica se a API de vibração está disponível e se é um dispositivo móvel
+    if ("vibrate" in navigator && window.innerWidth <= 900) {
+      try {
+        // Usa o padrão de vibração configurado
+        navigator.vibrate(CONFIG.VIBRATION_PATTERN);
+      } catch (e) {
+        console.log("Vibração não suportada ou bloqueada:", e);
+      }
+    }
+  }
+
+  function pararVibracao() {
+    if ("vibrate" in navigator) {
+      try {
+        navigator.vibrate(0); // Para qualquer vibração em andamento
+      } catch (e) {
+        console.log("Erro ao parar vibração:", e);
+      }
+    }
+  }
+
+  // Para vibração quando a página perde foco
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      pararVibracao();
+    }
+  });
+
+  // Para vibração quando a janela é fechada
+  window.addEventListener('beforeunload', function() {
+    pararVibracao();
+  });
 
   // --- GERENCIAMENTO DE CAMINHOS DE IMAGENS ---
   const arquivosComVersaoMobile = [
@@ -962,6 +999,7 @@
   let gameOver = false;
   let exibirGameOver = false;
   let controlesBloqueados = false;
+  let controlesTouchBloqueados = false;
   let ultimoObstaculo = 0;
   let ultimoSpawnArvore = 0;
   let ultimaMoeda = 0;
@@ -1275,6 +1313,7 @@
     gameOver = false;
     exibirGameOver = false;
     controlesBloqueados = false;
+    controlesTouchBloqueados = false;
     ultimoObstaculo = Date.now();
     ultimoSpawnArvore = Date.now();
     ultimaMoeda = Date.now();
@@ -1321,6 +1360,8 @@
   }
 
   function handleTouchMove(e) {
+      if (controlesTouchBloqueados) return;
+      
       if (!jogoIniciado || gameOver || faseConcluida) return;
       if(e.target === canvas) e.preventDefault();
 
@@ -1358,6 +1399,8 @@
   }
 
   function handleMobileControlTouchMove(e) {
+      if (controlesTouchBloqueados) return;
+      
       if (!jogoIniciado || gameOver || faseConcluida) return;
       if (mobileControlArea.dataset.isTouching !== "true") return;
       
@@ -1673,7 +1716,7 @@
   }
 
   function verificarColisaoPistaCongelada() {
-    if (controlesBloqueados || gameOver || faseConcluida) return;
+    if (controlesBloqueados || controlesTouchBloqueados || gameOver || faseConcluida) return;
     for (let i = frozenPatches.length - 1; i >= 0; i--) {
         const patch = frozenPatches[i];
         const hitboxWidth = patch.w * 0.4;
@@ -1685,9 +1728,17 @@
             freioSound.play().catch(e => console.log("Não foi possível tocar o som de freio:", e));
 
             controlesBloqueados = true;
+            controlesTouchBloqueados = true;
             frozenPatches.splice(i, 1);
+            
+            // ADICIONADO: Vibração do dispositivo móvel
+            vibrarDispositivo();
+            
             setTimeout(() => {
                 controlesBloqueados = false;
+                controlesTouchBloqueados = false;
+                // ADICIONADO: Parar vibração quando o bloqueio terminar
+                pararVibracao();
             }, CONFIG.DURACAO_BLOQUEIO_CONTROLE);
             break;
         }
