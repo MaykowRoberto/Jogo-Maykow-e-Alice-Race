@@ -786,7 +786,6 @@
     DURACAO_BLOQUEIO_CONTROLE: 400,
     VIBRATION_INTENSITY: 4,
     PISTA_CONGELADA_ANIMATION_SPEED: 0.1,
-    VIBRATION_PATTERN: [50, 50, 50, 50], // Padrão de vibração: vibrar 50ms, pausar 50ms, vibrar 50ms, pausar 50ms
   };
 
   // Configurações para Mobile (mais fácil)
@@ -810,9 +809,8 @@
     DURACAO_FASE_3: 105000,
     INTERVALO_PISTA_CONGELADA: 8000,
     DURACAO_BLOQUEIO_CONTROLE: 400,
-    VIBRATION_INTENSITY: 3,
+    VIBRATION_INTENSITY: 5,
     PISTA_CONGELADA_ANIMATION_SPEED: 0.1,
-    VIBRATION_PATTERN: [50, 50, 50, 50], // Padrão de vibração para mobile
   };
 
   // Usar configuração apropriada
@@ -836,92 +834,6 @@
 
   // Listener para mudança de tamanho/tela
   window.addEventListener('resize', atualizarConfiguracoesPorDispositivo);
-
-  // --- FUNÇÕES DE VIBRAÇÃO ---
-  let vibrationTimeout = null;
-  
-  function vibrarDispositivo() {
-    // Verifica se a API de vibração está disponível e se é um dispositivo móvel
-    if ("vibrate" in navigator && window.innerWidth <= 900) {
-      try {
-        console.log("Ativando vibração...");
-        // Cria um elemento de botão invisível para forçar interação do usuário
-        const fakeButton = document.createElement('button');
-        fakeButton.style.position = 'fixed';
-        fakeButton.style.top = '0';
-        fakeButton.style.left = '0';
-        fakeButton.style.width = '1px';
-        fakeButton.style.height = '1px';
-        fakeButton.style.opacity = '0';
-        fakeButton.style.pointerEvents = 'none';
-        document.body.appendChild(fakeButton);
-        
-        // Simula clique no botão falso para ativar contexto de interação
-        fakeButton.focus();
-        fakeButton.click();
-        
-        // Usa o padrão de vibração configurado
-        const success = navigator.vibrate(CONFIG.VIBRATION_PATTERN);
-        console.log("Vibração ativada:", success ? "Sucesso" : "Falhou");
-        
-        // Remove o botão falso
-        setTimeout(() => {
-          document.body.removeChild(fakeButton);
-        }, 100);
-        
-        // Para vibração após 400ms (tempo do bloqueio)
-        if (vibrationTimeout) clearTimeout(vibrationTimeout);
-        vibrationTimeout = setTimeout(() => {
-          pararVibracao();
-        }, CONFIG.DURACAO_BLOQUEIO_CONTROLE);
-        
-      } catch (e) {
-        console.log("Vibração não suportada ou bloqueada:", e);
-      }
-    } else {
-      console.log("API de vibração não disponível ou não é dispositivo móvel");
-    }
-  }
-
-  function pararVibracao() {
-    if ("vibrate" in navigator) {
-      try {
-        navigator.vibrate(0); // Para qualquer vibração em andamento
-        if (vibrationTimeout) {
-          clearTimeout(vibrationTimeout);
-          vibrationTimeout = null;
-        }
-      } catch (e) {
-        console.log("Erro ao parar vibração:", e);
-      }
-    }
-  }
-
-  // Para vibração quando a página perde foco
-  document.addEventListener('visibilitychange', function() {
-    if (document.hidden) {
-      pararVibracao();
-    }
-  });
-
-  // Para vibração quando a janela é fechada
-  window.addEventListener('beforeunload', function() {
-    pararVibracao();
-  });
-
-  // Teste de vibração no início (com interação do usuário)
-  document.addEventListener('DOMContentLoaded', function() {
-    // Adiciona um listener no botão start para testar vibração
-    const startButton = document.getElementById('start-game-button');
-    if (startButton && "vibrate" in navigator && window.innerWidth <= 900) {
-      startButton.addEventListener('click', function() {
-        // Teste rápido de vibração quando o usuário clica para começar
-        setTimeout(() => {
-          navigator.vibrate(100);
-        }, 500);
-      });
-    }
-  });
 
   // --- GERENCIAMENTO DE CAMINHOS DE IMAGENS ---
   const arquivosComVersaoMobile = [
@@ -1050,7 +962,7 @@
   let gameOver = false;
   let exibirGameOver = false;
   let controlesBloqueados = false;
-  let controlesTouchBloqueados = false;
+  let controlesTouchBloqueados = false; // NOVO: controle para bloqueio de toque
   let ultimoObstaculo = 0;
   let ultimoSpawnArvore = 0;
   let ultimaMoeda = 0;
@@ -1364,7 +1276,7 @@
     gameOver = false;
     exibirGameOver = false;
     controlesBloqueados = false;
-    controlesTouchBloqueados = false;
+    controlesTouchBloqueados = false; // RESETA: controle de toque
     ultimoObstaculo = Date.now();
     ultimoSpawnArvore = Date.now();
     ultimaMoeda = Date.now();
@@ -1408,12 +1320,10 @@
   function handleTouchStart(e) {
       if (!jogoIniciado || gameOver || faseConcluida) return;
       if(e.target === canvas) e.preventDefault();
-      
-      // Esta função é chamada pelo usuário, então podemos ativar vibração aqui se necessário
-      // Mas vamos manter apenas para controle
   }
 
   function handleTouchMove(e) {
+      // ADICIONADO: Verifica se controles de toque estão bloqueados
       if (controlesTouchBloqueados) return;
       
       if (!jogoIniciado || gameOver || faseConcluida) return;
@@ -1453,6 +1363,7 @@
   }
 
   function handleMobileControlTouchMove(e) {
+      // ADICIONADO: Verifica se controles de toque estão bloqueados
       if (controlesTouchBloqueados) return;
       
       if (!jogoIniciado || gameOver || faseConcluida) return;
@@ -1782,43 +1693,12 @@
             freioSound.play().catch(e => console.log("Não foi possível tocar o som de freio:", e));
 
             controlesBloqueados = true;
-            controlesTouchBloqueados = true;
+            controlesTouchBloqueados = true; // BLOQUEIA CONTROLES DE TOQUE
             frozenPatches.splice(i, 1);
-            
-            // ADICIONADO: Vibração do dispositivo móvel - ATUALIZADO
-            // Usamos um timeout para garantir que está no contexto de interação
-            setTimeout(() => {
-                if ("vibrate" in navigator && window.innerWidth <= 900) {
-                    console.log("Ativando vibração na pista congelada...");
-                    // Cria um evento de clique simulado para ativar contexto de interação
-                    const event = new MouseEvent('click', {
-                        view: window,
-                        bubbles: true,
-                        cancelable: true
-                    });
-                    
-                    // Dispara o evento no canvas (que já tem interação do usuário)
-                    canvas.dispatchEvent(event);
-                    
-                    // Ativa vibração
-                    try {
-                        const success = navigator.vibrate(CONFIG.VIBRATION_PATTERN);
-                        console.log("Vibração ativada com sucesso:", success);
-                        
-                        // Para vibração após 400ms
-                        setTimeout(() => {
-                            navigator.vibrate(0);
-                        }, CONFIG.DURACAO_BLOQUEIO_CONTROLE);
-                    } catch (err) {
-                        console.log("Erro ao ativar vibração:", err);
-                    }
-                }
-            }, 10);
-            
             setTimeout(() => {
                 controlesBloqueados = false;
-                controlesTouchBloqueados = false;
-            }, CONFIG.DURACAO_BLOQUEIO_CONTROLE);
+                controlesTouchBloqueados = false; // LIBERA CONTROLES DE TOQUE
+            }, CONFIG.DURACAO_BLOQUEIO_CONTROLE); // 400 milissegundos
             break;
         }
     }
