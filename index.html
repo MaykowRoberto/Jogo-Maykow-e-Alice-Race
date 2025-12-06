@@ -20,11 +20,10 @@
       touch-action: none;
     }
 
-    /* O background image agora é controlado via JS para garantir a troca Mobile/Desktop */
     #game-container {
       background-repeat: no-repeat;
       background-position: center center;
-      background-size: cover; /* Padrão Desktop */
+      background-size: cover;
       display: grid;
       border: 3px solid white;
       width: 100vw;
@@ -35,7 +34,6 @@
       position: relative;
       box-sizing: border-box;
       
-      /* Layout em grid para desktop */
       grid-template-columns: 260px auto 300px;
       grid-template-rows: 1fr;
       grid-template-areas: "vehicle game ranking";
@@ -369,7 +367,6 @@
       margin-top: 400px;
     }
 
-    /* --- ÁREA DE CONTROLE MOBILE --- */
     #mobile-control-area {
       display: none;
       width: 100%;
@@ -416,10 +413,8 @@
       font-weight: bold;
     }
 
-    /* --- RESPONSIVIDADE (MOBILE GERAL - até 900px) --- */
     @media (max-width: 900px) {
       
-      /* AJUSTE PARA NÃO CORTAR TEXTOS DAS TELAS DE FUNDO EM MOBILE */
       #start-screen,
       #transition-screen,
       #transition-screen-phase-2,
@@ -430,7 +425,6 @@
         background-repeat: no-repeat !important;
       }
 
-      /* Ajuste específico para a imagem de Game Over para garantir que não corte */
       #final-game-over-img {
           object-fit: contain !important;
           width: 100% !important;
@@ -460,12 +454,11 @@
         width: 100%;
         height: auto;
         aspect-ratio: 480/600;
-        max-height: 60vh;
+        max-height: 55vh;
         justify-self: center;
         margin-top: 10px;
       }
 
-      /* Mostrar área de controle no mobile */
       #mobile-control-area {
         display: flex;
         order: 3;
@@ -528,7 +521,7 @@
 
       .car-driver-wrapper {
         gap: 8px;
-        flex-direction: column; /* Padrão mobile tablet */
+        flex-direction: column;
       }
 
       .car-option img.car-image {
@@ -562,11 +555,9 @@
       }
     }
 
-    /* --- RESPONSIVIDADE ESPECÍFICA PARA TELAS PEQUENAS (480px / 430px) --- */
     @media (max-width: 480px) {
-      /* Configuração do Grid para manter Veículo em Cima e Ranking Embaixo */
       #game-container {
-        display: grid !important; /* Força grid para respeitar grid-areas */
+        display: grid !important;
         grid-template-areas: 
           "vehicle"
           "game"
@@ -599,46 +590,40 @@
         font-size: 20px;
       }
 
-      /* Container dos veículos em Triângulo */
       #car-options {
         display: flex;
         flex-wrap: wrap;
-        justify-content: space-between; /* Espalha os dois primeiros */
+        justify-content: space-between;
         gap: 10px;
       }
 
-      /* Cards individuais */
       .car-option {
-        width: 48%; /* Permite dois na mesma linha */
+        width: 48%;
         min-height: 120px;
         padding: 5px;
         margin: 0;
-        transform: none; /* Remove escala para ajuste fino */
+        transform: none;
       }
       
-      /* Veículos 1 e 2 na primeira linha */
       .car-option:nth-child(1),
       .car-option:nth-child(2) {
         width: 48%;
       }
       
-      /* Veículo 3 centralizado abaixo */
       .car-option:nth-child(3) {
-        width: 60%; /* Um pouco mais largo para destaque ou 48% também funciona */
+        width: 60%;
         margin-top: 10px;
         margin-left: auto;
         margin-right: auto;
       }
       
-      /* CONFIGURAÇÃO CARRO ESQUERDA / PILOTO DIREITA */
       .car-driver-wrapper {
-        flex-direction: row !important; /* Força linha horizontal */
+        flex-direction: row !important;
         align-items: center;
         justify-content: center;
         gap: 10px;
       }
 
-      /* Ajuste de tamanho das imagens para caberem lado a lado no card pequeno */
       .car-option img.car-image {
         width: 40px;
         height: auto;
@@ -661,7 +646,6 @@
         margin-bottom: 10px;
       }
 
-      /* Ranking fica embaixo */
       #ranking {
         margin-top: 0;
       }
@@ -707,8 +691,9 @@
          <ol id="rankingList"></ol>
       </div>
       <button id="resetRanking">Zerar Ranking</button>
-    </div>
+  </div>
 
+ 
     <div id="vehicle-sidebar">
       <h2>Escolha seu Veículo</h2>
         <div id="initials-container" style="margin-bottom: 15px; text-align: center;">
@@ -720,7 +705,6 @@
       <img id="startButton" src="assets/img/botao.png" alt="Iniciar Jogo">
     </div>
 
-    <!-- NOVA ÁREA DE CONTROLE PARA MOBILE -->
     <div id="mobile-control-area">
       <div class="control-label">ÁREA DE CONTROLE - DESLIZE O DEDO</div>
       <div class="control-arrows">
@@ -776,82 +760,11 @@
 
 <script>
 (() => {
-  // --- GERENCIAMENTO DE CAMINHOS DE IMAGENS E RESPONSIVIDADE ---
-  const arquivosComVersaoMobile = [
-    'fundo_deserto.png',
-    'fundo_fase3.png',
-    'fundo_garagem.png',
-    'fundo_pista.png',
-    'fundo_tela_apresentacao.png',
-    'tela_game_over.png',
-    'transicao_fase_1.png',
-    'transicao_fase_2.png',
-    'transicao_fase_3.png',
-    'voce_venceu.png'
-  ];
-
-  function obterCaminhoImagem(nomeArquivo) {
-      const isMobile = window.innerWidth <= 900;
-      
-      if (isMobile && arquivosComVersaoMobile.includes(nomeArquivo)) {
-          const pontoIndex = nomeArquivo.lastIndexOf('.');
-          const nomeSemExtensao = nomeArquivo.substring(0, pontoIndex);
-          const extensao = nomeArquivo.substring(pontoIndex); // inclui o ponto
-          
-          const caminhoMobile = `assets/img/celular/${nomeSemExtensao}_celular${extensao}`;
-          return caminhoMobile;
-      }
-      
-      const caminhoDesktop = `assets/img/${nomeArquivo}`;
-      return caminhoDesktop;
-  }
-
-  // Função para atualizar as imagens estáticas imediatamente ao redimensionar ou carregar
-  function aplicarImagensEstaticas() {
-      // Tela Inicial
-      const startScreen = document.getElementById('start-screen');
-      if(startScreen) startScreen.style.backgroundImage = `url('${obterCaminhoImagem("fundo_tela_apresentacao.png")}')`;
-
-      // Telas de Transição
-      const t1 = document.getElementById('transition-screen');
-      const t2 = document.getElementById('transition-screen-phase-2');
-      const t3 = document.getElementById('transition-screen-phase-3');
-      if(t1) t1.style.backgroundImage = `url('${obterCaminhoImagem("transicao_fase_1.png")}')`;
-      if(t2) t2.style.backgroundImage = `url('${obterCaminhoImagem("transicao_fase_2.png")}')`;
-      if(t3) t3.style.backgroundImage = `url('${obterCaminhoImagem("transicao_fase_3.png")}')`;
-
-      // Tela de Vitória
-      const victoryBg = document.getElementById('victory-screen-background');
-      if(victoryBg) victoryBg.style.backgroundImage = `url('${obterCaminhoImagem("voce_venceu.png")}')`;
-
-      // Fundo da Garagem (Se o jogo não estiver rodando na pista)
-      const gameContainer = document.getElementById('game-container');
-      if (!jogoIniciado && !faseConcluida && currentPhase === 1) {
-          gameContainer.style.backgroundImage = `url('${obterCaminhoImagem("fundo_garagem.png")}')`;
-      }
-  }
-
-  // Listener para troca de orientação/tamanho da tela em tempo real
-  window.addEventListener('resize', () => {
-      aplicarImagensEstaticas();
-      // Se estiver no jogo, atualiza o fundo da fase atual
-      if (jogoIniciado) {
-          const gameContainerElement = document.getElementById('game-container');
-          if (currentPhase === 1) {
-              gameContainerElement.style.backgroundImage = `url('${obterCaminhoImagem("fundo_pista.png")}')`;
-          } else if (currentPhase === 2) {
-              gameContainerElement.style.backgroundImage = `url('${obterCaminhoImagem("fundo_deserto.png")}')`;
-          } else if (currentPhase === 3) {
-              gameContainerElement.style.backgroundImage = `url('${obterCaminhoImagem("fundo_fase3.png")}')`;
-          }
-      }
-  });
-
-  const sandstormCanvas = document.getElementById("sandstormCanvas");
-  const sandCtx = sandstormCanvas.getContext("2d");
-  let whirlwindParticles = [];
-  const whirlwindCenter = { x: sandstormCanvas.width / 2, y: sandstormCanvas.height / 2 };
-  const CONFIG = {
+  // --- CONFIGURAÇÕES POR DISPOSITIVO ---
+  const isMobileDevice = window.innerWidth <= 900;
+  
+  // Configurações para Desktop
+  const CONFIG_DESKTOP = {
     VELOCIDADE_INICIAL: 4,
     INCREMENTO_VELOCIDADE: 0.5,
     INTERVALO_OBSTACULOS: 1200,
@@ -874,6 +787,121 @@
     VIBRATION_INTENSITY: 4,
     PISTA_CONGELADA_ANIMATION_SPEED: 0.1,
   };
+
+  // Configurações para Mobile (mais fácil)
+  const CONFIG_MOBILE = {
+    VELOCIDADE_INICIAL: 3.5,
+    INCREMENTO_VELOCIDADE: 0.4,
+    INTERVALO_OBSTACULOS: 1500,
+    INTERVALO_ARVORES: 500,
+    PONTOS_PARA_DIFICULDADE: 15,
+    TEMPO_ATRASO_GAMEOVER: 1000,
+    PONTOS_MOEDA: 15,
+    INTERVALO_MOEDAS: 4500,
+    VELOCIDADE_LATERAL_CARRO: 5,
+    MOEDA_SPRITE_WIDTH: 40,
+    MOEDA_SPRITE_HEIGHT: 40,
+    MOEDA_FRAMES: 1,
+    MOEDA_ANIMATION_SPEED: 0.1,
+    BLINK_START_BUTTON_DURATION: 1200,
+    DURACAO_FASE_1: 75000,
+    DURACAO_FASE_2: 90000,
+    DURACAO_FASE_3: 105000,
+    INTERVALO_PISTA_CONGELADA: 8000,
+    DURACAO_BLOQUEIO_CONTROLE: 300,
+    VIBRATION_INTENSITY: 3,
+    PISTA_CONGELADA_ANIMATION_SPEED: 0.1,
+  };
+
+  // Usar configuração apropriada
+  let CONFIG = isMobileDevice ? CONFIG_MOBILE : CONFIG_DESKTOP;
+
+  // Função para atualizar configurações se o tamanho da tela mudar
+  function atualizarConfiguracoesPorDispositivo() {
+    const novaConfig = window.innerWidth <= 900 ? CONFIG_MOBILE : CONFIG_DESKTOP;
+    
+    // Atualizar todas as propriedades da configuração atual
+    Object.keys(novaConfig).forEach(key => {
+      CONFIG[key] = novaConfig[key];
+    });
+    
+    // Se o jogo estiver rodando, ajustar velocidade atual
+    if (jogoIniciado && !gameOver && !faseConcluida) {
+      const fatorAjuste = novaConfig.VELOCIDADE_INICIAL / CONFIG.VELOCIDADE_INICIAL;
+      velocidade = Math.max(novaConfig.VELOCIDADE_INICIAL, velocidade * fatorAjuste);
+    }
+  }
+
+  // Listener para mudança de tamanho/tela
+  window.addEventListener('resize', atualizarConfiguracoesPorDispositivo);
+
+  // --- GERENCIAMENTO DE CAMINHOS DE IMAGENS ---
+  const arquivosComVersaoMobile = [
+    'fundo_deserto.png',
+    'fundo_fase3.png',
+    'fundo_garagem.png',
+    'fundo_pista.png',
+    'fundo_tela_apresentacao.png',
+    'tela_game_over.png',
+    'transicao_fase_1.png',
+    'transicao_fase_2.png',
+    'transicao_fase_3.png',
+    'voce_venceu.png'
+  ];
+
+  function obterCaminhoImagem(nomeArquivo) {
+      const isMobile = window.innerWidth <= 900;
+      
+      if (isMobile && arquivosComVersaoMobile.includes(nomeArquivo)) {
+          const pontoIndex = nomeArquivo.lastIndexOf('.');
+          const nomeSemExtensao = nomeArquivo.substring(0, pontoIndex);
+          const extensao = nomeArquivo.substring(pontoIndex);
+          
+          return `assets/img/celular/${nomeSemExtensao}_celular${extensao}`;
+      }
+      
+      return `assets/img/${nomeArquivo}`;
+  }
+
+  function aplicarImagensEstaticas() {
+      const startScreen = document.getElementById('start-screen');
+      if(startScreen) startScreen.style.backgroundImage = `url('${obterCaminhoImagem("fundo_tela_apresentacao.png")}')`;
+
+      const t1 = document.getElementById('transition-screen');
+      const t2 = document.getElementById('transition-screen-phase-2');
+      const t3 = document.getElementById('transition-screen-phase-3');
+      if(t1) t1.style.backgroundImage = `url('${obterCaminhoImagem("transicao_fase_1.png")}')`;
+      if(t2) t2.style.backgroundImage = `url('${obterCaminhoImagem("transicao_fase_2.png")}')`;
+      if(t3) t3.style.backgroundImage = `url('${obterCaminhoImagem("transicao_fase_3.png")}')`;
+
+      const victoryBg = document.getElementById('victory-screen-background');
+      if(victoryBg) victoryBg.style.backgroundImage = `url('${obterCaminhoImagem("voce_venceu.png")}')`;
+
+      const gameContainer = document.getElementById('game-container');
+      if (!jogoIniciado && !faseConcluida && currentPhase === 1) {
+          gameContainer.style.backgroundImage = `url('${obterCaminhoImagem("fundo_garagem.png")}')`;
+      }
+  }
+
+  window.addEventListener('resize', () => {
+      aplicarImagensEstaticas();
+      if (jogoIniciado) {
+          const gameContainerElement = document.getElementById('game-container');
+          if (currentPhase === 1) {
+              gameContainerElement.style.backgroundImage = `url('${obterCaminhoImagem("fundo_pista.png")}')`;
+          } else if (currentPhase === 2) {
+              gameContainerElement.style.backgroundImage = `url('${obterCaminhoImagem("fundo_deserto.png")}')`;
+          } else if (currentPhase === 3) {
+              gameContainerElement.style.backgroundImage = `url('${obterCaminhoImagem("fundo_fase3.png")}')`;
+          }
+      }
+  });
+
+  const sandstormCanvas = document.getElementById("sandstormCanvas");
+  const sandCtx = sandstormCanvas.getContext("2d");
+  let whirlwindParticles = [];
+  const whirlwindCenter = { x: sandstormCanvas.width / 2, y: sandstormCanvas.height / 2 };
+  
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
   
@@ -915,7 +943,6 @@
   const transitionScreenPhase2 = document.getElementById("transition-screen-phase-2");
   const transitionScreenPhase3 = document.getElementById("transition-screen-phase-3");
   
-  // Elemento da área de controle mobile
   const mobileControlArea = document.getElementById("mobile-control-area");
   
   const margemEsquerda = 80;
@@ -1038,7 +1065,6 @@
       confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
   }
 
-
   function criarChuva() {
     gotasDeChuva = [];
     for (let i = 0; i < NUM_GOTAS; i++) {
@@ -1066,7 +1092,6 @@
       }
     }
   }
-
 
   const rainSound = document.getElementById("rainSound");
   let chuvaAtiva = false;
@@ -1185,16 +1210,15 @@
     if (window.innerWidth <= 900) {
         vehicleSidebar.style.display = 'none';
         rankingElement.style.display = 'none';
-        mobileControlArea.style.display = 'flex'; // Mostrar área de controle no mobile
+        mobileControlArea.style.display = 'flex';
     } else {
         vehicleSidebar.style.display = 'none';
-        mobileControlArea.style.display = 'none'; // Esconder no desktop
+        mobileControlArea.style.display = 'none';
     }
 
     canvas.style.display = 'block';
     const gameContainerElement = document.getElementById('game-container');
 
-    // Lógica de Background Dinâmico (Mobile/Desktop)
     if (currentPhase === 1) {
         document.getElementById('sunlight-overlay').style.display = 'none';
         gameContainerElement.style.backgroundImage = `url('${obterCaminhoImagem("fundo_pista.png")}')`;
@@ -1280,7 +1304,6 @@
     livesDisplay.textContent = `Vidas: ${vidas}`;
   }
 
-  // --- CONTROLES DE TECLADO ---
   document.addEventListener("keydown", e => {
     if (jogoIniciado && !gameOver && !faseConcluida) {
         if (e.key === "ArrowLeft") esquerdaPressionado = true;
@@ -1292,11 +1315,8 @@
     else if (e.key === "ArrowRight") direitaPressionado = false;
   });
 
-  // --- CONTROLES DE TOQUE (TOUCH) ---
-  // Controles dentro do canvas (funcionalidade original mantida)
   function handleTouchStart(e) {
       if (!jogoIniciado || gameOver || faseConcluida) return;
-      // Prevenir comportamento padrão no canvas
       if(e.target === canvas) e.preventDefault();
   }
 
@@ -1307,28 +1327,19 @@
       const touch = e.touches[0];
       const rect = canvas.getBoundingClientRect();
       
-      // Fator de escala (caso o canvas CSS tenha tamanho diferente do canvas HTML)
       const scaleX = canvas.width / rect.width;
-
-      // Calcula a posição do toque relativa ao canvas (escala 0 a 480)
       const touchX = (touch.clientX - rect.left) * scaleX;
-
-      // Define a nova posição do carro baseada no toque
-      // Subtraímos metade da largura do carro para centralizá-lo no dedo
       let novaPosicaoCarro = touchX - (carroLargura / 2);
 
-      // Limites da pista (Clamp)
       if (novaPosicaoCarro < margemEsquerda) {
           novaPosicaoCarro = margemEsquerda;
       } else if (novaPosicaoCarro + carroLargura > margemDireita) {
           novaPosicaoCarro = margemDireita - carroLargura;
       }
 
-      // Atualiza a posição do carro diretamente
       carroX = novaPosicaoCarro;
   }
 
-  // Controles na área de controle mobile
   function handleMobileControlTouchStart(e) {
       if (!jogoIniciado || gameOver || faseConcluida) return;
       e.preventDefault();
@@ -1338,12 +1349,10 @@
       const touchX = touch.clientX - rect.left;
       const touchY = touch.clientY - rect.top;
       
-      // Salvar posição inicial do toque
       mobileControlArea.dataset.startX = touchX;
       mobileControlArea.dataset.startY = touchY;
       mobileControlArea.dataset.isTouching = "true";
       
-      // Adicionar efeito visual de toque
       mobileControlArea.style.background = "rgba(0, 0, 0, 0.9)";
       mobileControlArea.style.borderColor = "#4CAF50";
   }
@@ -1359,28 +1368,19 @@
       const touchX = touch.clientX - rect.left;
       const startX = parseFloat(mobileControlArea.dataset.startX || touchX);
       
-      // Calcular deslocamento horizontal
       const deltaX = touchX - startX;
-      
-      // Converter deslocamento para movimento do carro
-      // Ajustar a sensibilidade conforme necessário
       const sensitivity = 1.5;
       let novaPosicaoCarro = carroX + (deltaX * sensitivity);
       
-      // Limites da pista (Clamp)
       if (novaPosicaoCarro < margemEsquerda) {
           novaPosicaoCarro = margemEsquerda;
       } else if (novaPosicaoCarro + carroLargura > margemDireita) {
           novaPosicaoCarro = margemDireita - carroLargura;
       }
       
-      // Atualiza a posição do carro
       carroX = novaPosicaoCarro;
-      
-      // Atualizar posição inicial para movimento contínuo
       mobileControlArea.dataset.startX = touchX;
       
-      // Adicionar efeito visual de movimento
       const arrows = mobileControlArea.querySelector('.control-arrows');
       if (deltaX > 0) {
           arrows.style.transform = "translateX(5px)";
@@ -1393,21 +1393,17 @@
       if (!jogoIniciado || gameOver || faseConcluida) return;
       e.preventDefault();
       
-      // Resetar estado do toque
       mobileControlArea.dataset.isTouching = "false";
       delete mobileControlArea.dataset.startX;
       delete mobileControlArea.dataset.startY;
       
-      // Restaurar aparência original
       mobileControlArea.style.background = "rgba(0, 0, 0, 0.7)";
       mobileControlArea.style.borderColor = "white";
       
-      // Resetar transformação das setas
       const arrows = mobileControlArea.querySelector('.control-arrows');
       arrows.style.transform = "translateX(0)";
   }
 
-  // Adicionar ouvintes de evento para a área de controle mobile
   if (mobileControlArea) {
       mobileControlArea.addEventListener("touchstart", handleMobileControlTouchStart, { passive: false });
       mobileControlArea.addEventListener("touchmove", handleMobileControlTouchMove, { passive: false });
@@ -1415,12 +1411,10 @@
       mobileControlArea.addEventListener("touchcancel", handleMobileControlTouchEnd, { passive: false });
   }
 
-  // Adiciona os ouvintes de evento para o canvas (funcionalidade original mantida)
   canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
   canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
   
   canvas.addEventListener("touchend", (e) => {
-      // Opcional: Se quiser que o carro pare de receber comandos ao soltar
       if(e.target === canvas) e.preventDefault();
   }, { passive: false });
 
@@ -1430,8 +1424,6 @@
     messageBox.innerHTML = `<p>Tem certeza que deseja zerar o ranking?</p><button id="confirm-reset" style="margin-right: 10px; padding: 10px 20px; background: #4CAF50; border: none; border-radius: 5px; color: white; cursor: pointer; font-size: 16px;">Sim</button><button id="cancel-reset" style="padding: 10px 20px; background: #ff4444; border: none; border-radius: 5px; color: white; cursor: pointer; font-size: 16px;">Não</button>`;
     document.body.appendChild(messageBox);
     document.getElementById('confirm-reset').onclick = () => {
-     
-     
      ranking = [];
         localStorage.removeItem("ranking");
         atualizarRanking();
@@ -1931,7 +1923,6 @@
                  
     
                     document.getElementById('sunlight-overlay').style.display = 'none';
-                    // Fundo garagem dinâmica
                     document.getElementById('game-container').style.backgroundImage = `url('${obterCaminhoImagem("fundo_garagem.png")}')`;
                     vehicleSidebar.style.display = 'flex';
                     rankingElement.style.display = 'flex';
@@ -1943,7 +1934,6 @@
                     menuMusicSound.play().catch(e => console.log("Não foi possível tocar a música do menu:", e));
                 }, 2500);
             } else {
-                // Pontuação extra por fase
   let bonus = 0;
   if (currentPhase === 1) bonus = 20;
   else if (currentPhase === 2) bonus = 40;
@@ -2017,7 +2007,6 @@
     rainSound.currentTime = 0;
     mobileControlArea.style.display = 'none';
     
-    // Pontuação extra por fase
   let bonus = 0;
   if (currentPhase === 1) bonus = 20;
   else if (currentPhase === 2) bonus = 40;
@@ -2036,7 +2025,6 @@
             victoryScreen.style.display = 'block';
             victoryScreenBackground.classList.remove('fade-out');
             
-            // Background vitória dinâmica
             document.getElementById('victory-screen-background').style.backgroundImage = `url('${obterCaminhoImagem("voce_venceu.png")}')`;
             
             startConfetti();
@@ -2062,14 +2050,12 @@
             setTimeout(() => {
                 endingVideo.style.display = 'none';
                 endingVideo.pause();
-                // Background garagem dinâmica
                 document.getElementById('game-container').style.backgroundImage = `url('${obterCaminhoImagem("fundo_garagem.png")}')`;
            
                
                  currentPhase = 1;
                 document.getElementById('game-container').style.display = 'none';
                 document.getElementById('start-screen').style.display = 'flex';
-                // Atualizar BG start screen
                 document.getElementById('start-screen').style.backgroundImage = `url('${obterCaminhoImagem("fundo_tela_apresentacao.png")}')`;
                 
                 vehicleSidebar.style.display = 'none';
@@ -2113,7 +2099,6 @@
         rankingElement.style.display = 'none';
         mobileControlArea.style.display = 'none';
         
-        // Background garagem dinâmica
         document.getElementById('game-container').style.backgroundImage = `url('${obterCaminhoImagem("fundo_garagem.png")}')`;
         document.getElementById('game-container').style.display = 'none';
 
@@ -2133,7 +2118,6 @@
             setTimeout(() => {
                 finalGameOverScreen.style.display = 'none';
                 document.getElementById('start-screen').style.display = 'flex';
-                // Atualiza BG
                 document.getElementById('start-screen').style.backgroundImage = `url('${obterCaminhoImagem("fundo_tela_apresentacao.png")}')`;
                 currentPhase = 1;
             }, 1000);
@@ -2159,7 +2143,6 @@
     if (gameOver) {
         desenharGameOver();
     } else if (faseConcluida) {
-        // Jogo parado
     } else {
         const agora = Date.now();
         if (agora - ultimoObstaculoLateral > 15000 && !linhaDeChegada) {
@@ -2174,9 +2157,6 @@
             if (carroX < margemEsquerda) carroX = margemEsquerda;
             if (carroX + carroLargura > margemDireita) carroX = margemDireita - carroLargura;
         } else {
-            // MANTENHA O CÓDIGO DO TECLADO AQUI
-            // O código de toque novo já atualizou 'carroX' diretamente no evento touchmove.
-            // O teclado continua somando velocidade se as teclas estiverem pressionadas.
             if (esquerdaPressionado && carroX > margemEsquerda) carroX -= CONFIG.VELOCIDADE_LATERAL_CARRO;
             if (direitaPressionado && carroX + carroLargura < margemDireita) carroX += CONFIG.VELOCIDADE_LATERAL_CARRO;
         }
@@ -2293,16 +2273,12 @@
         troncoImage.src = "assets/img/tronco.png";
         imageTransitionPhase2.src = 'assets/img/transicao_fase_2.png';
         
-        // As transições agora são dinâmicas via JS
-        
         allSoundsToLoad.forEach(audio => {
             if (audio.readyState >= 2) checkCompletion();
             else {
                 audio.oncanplaythrough = checkCompletion;
                 audio.onerror = () => handleError(audio.src);
                 audio.load();
-      
-      
              }
          });
     });
@@ -2320,7 +2296,6 @@
       div.addEventListener('click', () => {
         document.querySelectorAll('.car-option').forEach(opt => opt.classList.remove('selected'));
         div.classList.add('selected');
-      
       
         carroSelecionadoId = carInfo.id;
         imagemCarroAtual = carInfo.image;
@@ -2348,7 +2323,6 @@
             if (++blinks >= 6) {
                 clearInterval(intervalId);
                 startButton.classList.remove('blinking-button');
-      
       
                  startButton.style.visibility = 'visible';
                 resolve();
@@ -2386,10 +2360,7 @@
               activeTransitionMusic = transitionMusicSoundPhase1;
               transitionDuration = 4000;
           } else if (currentPhase === 2) {
-             
-             
              activeTransitionScreen = transitionScreenPhase2;
-   
               activeTransitionMusic = musicaTransitionSoundPhase2;
               transitionDuration = 4000;
           } else {
@@ -2412,8 +2383,6 @@
                  rankingElement.style.display = 'flex';
               }
               startButton.disabled = false;
-      
-      
     
     }, transitionDuration);
     } else {
@@ -2434,7 +2403,6 @@
     startScreen.style.display = 'flex';
     menuMusicSound.load();
     
-    // Aplicar backgrounds iniciais dinamicamente
     aplicarImagensEstaticas();
 
   }).catch(error => {
@@ -2444,7 +2412,7 @@
 
   startGameButton.addEventListener('click', () => {
     startScreen.style.display = 'none';
-    gameContainer.style.display = 'grid'; // alterado de flex para grid para respeitar layout mobile
+    gameContainer.style.display = 'grid';
     vehicleSidebar.style.display = 'flex';
     rankingElement.style.display = 'flex';
     canvas.style.display = 'none';
